@@ -1,33 +1,32 @@
 # Anamorphic Format
 
-Anamorphic Format is an optional mode in the **Page** section. It lets page dimensions drive the grid while preserving the current page grid-step structure.
+Anamorphic Format lets the page dimensions drive the horizontal and vertical line measures while preserving the active grid structure.
 
-When the mode is off, Emetric uses the normal type-led model:
+In normal mode, Emetric is type-led:
 
 ```text
 Metrics / Leading → Grid → Margins → Page Format
 ```
 
-When the mode is on, Page Width and Page Height become editable drivers. They solve back to line measures using the same format expansion as normal mode, including the active margin factors:
+In Anamorphic Format, the page is format-led:
 
 ```text
-Page Width ÷ horizontal page grid steps = Column Leading
-Page Height ÷ vertical page grid steps = Row Leading
+Page Width → Column Leading
+Page Height → Row Leading
 ```
 
-The page grid steps are derived from the existing structure:
+The current grid structure is preserved:
 
-```text
-horizontal page grid steps = Columns × Column Grid Group + Left Margin factor − 1 + Right Margin factor − 1
-vertical page grid steps   = Rows × Row Grid Group + Top Margin factor − 1 + Bottom Margin factor − 1
-```
+- Column Grid Group is not changed by Width.
+- Row Grid Group is not changed by Height.
+- Grid Modules Columns and Rows are not changed by Width or Height.
+- Margin factors remain active and continue to contribute to the page grid-step count.
 
-This means a margin change made before enabling Anamorphic Format is preserved when the page size is edited. The format is stretched from the current state instead of being reset to the bare module grid.
+## Lock Format Ratio
 
-Grid Group, Columns, Rows and Margin factors are preserved. Column Leading and Row Leading may diverge.
+When **Lock Format Ratio** is enabled together with **Anamorphic Format**, editing one page dimension derives the other from the current page ratio.
 
-InDesign document grid export follows the same model:
+- Editing Width keeps the current Width/Height ratio and derives Height.
+- Editing Height keeps the current Width/Height ratio and derives Width.
+- Height changes continue to drive Row Leading and Metrics through the active Metrics/Leading ratio.
 
-- Horizontal Gridline Division = Column Leading
-- Vertical Gridline Division = Row Leading
-- Baseline Grid Division = Row Leading

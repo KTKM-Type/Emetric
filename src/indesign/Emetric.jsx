@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.5, 2026
+Version 0.42.0-alpha.6, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.5";
+    var VERSION = "0.42.0-alpha.6";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -2499,26 +2499,16 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
-    function setWhitePasteboard(doc) {
-        // InDesign's normal pasteboard color is an application preference.
-        // 0 = Default White, 1 = Match with Theme Color.
+    function setThemePasteboard(doc) {
+        // InDesign > Preferences > Guides and Pasteboard:
+        // Preview Background defaults to Match to Theme Color.
         try {
-            app.generalPreferences.pasteboardColorPreference = 0;
-        } catch (_) {}
-
-        // Keep Preview-mode background white as well where supported.
-        try {
-            doc.pasteboardPreferences.matchPreviewBackgroundToThemeColor = false;
+            app.generalPreferences.pasteboardColorPreference = 1;
         } catch (_) {}
 
         try {
-            doc.pasteboardPreferences.previewBackgroundColor = UIColors.WHITE;
-        } catch (_) {
-            try {
-                doc.pasteboardPreferences.previewBackgroundColor =
-                    [255, 255, 255];
-            } catch (__) {}
-        }
+            doc.pasteboardPreferences.matchPreviewBackgroundToThemeColor = true;
+        } catch (_) {}
     }
 
     function getNamedStyle(collection, names, fallbackIndex) {
@@ -2653,7 +2643,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
     function createDocument(v, r, options) {
         var doc = app.documents.add();
-        setWhitePasteboard(doc);
+        setThemePasteboard(doc);
 
         // Build the complete document in millimeters so all numeric layout
         // values are interpreted consistently, regardless of selected display unit.
@@ -2749,7 +2739,7 @@ sold or otherwise used without prior written permission from the copyright holde
             } catch (_) {}
         }
 
-        // Apply or remove A-Master only after every document page exists.
+        // Apply or remove A-Parent only after every document page exists.
         applyAMasterOption(
             doc,
             options.useAMaster
@@ -2776,7 +2766,7 @@ sold or otherwise used without prior written permission from the copyright holde
             }
         }
 
-        // Without A-Master, settings must be written directly to every
+        // Without A-Parent, settings must be written directly to every
         // document page, including Placeholder Text and Index Page.
         applyPageBoundSettings(
             settingsPages,
@@ -4245,6 +4235,12 @@ sold or otherwise used without prior written permission from the copyright holde
         pHorizontal.add("checkbox", undefined, "Column Gutter Guides");
     guideColumnsCheckbox.value = true;
 
+    var columnGuidesCheckbox =
+        pHorizontal.add("checkbox", undefined, "Apply Column Gutters");
+    columnGuidesCheckbox.value = true;
+    columnGuidesCheckbox.helpTip =
+        "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
+
     var pGridGroup = addSection(col2, "Grid Modules");
     var fGridGroupH = addRow(pGridGroup, "Columns", "6", true, "");
     var fGridGroupV = addRow(pGridGroup, "Rows", "9", true, "");
@@ -4275,13 +4271,6 @@ sold or otherwise used without prior written permission from the copyright holde
     var pPage = addSection(col3, "Page");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
-
-    var anamorphicFormat =
-        pPage.add("checkbox", undefined, "Anamorphic Format");
-    anamorphicFormat.value = false;
-    anamorphicFormat.helpTip =
-        "Enables editable page dimensions. Width and Height solve back to Column Leading and Row Leading while preserving the current page grid steps.";
-
     var oSpread = addRow(pPage, "Spread", "", false, "mm");
 
     oPageWidth.helpTip =
@@ -4293,6 +4282,13 @@ sold or otherwise used without prior written permission from the copyright holde
     var oFormatRatio =
         addRatioRow(pPage, "Format Ratio", "", "", false);
 
+    var lockFormatRatio =
+        pPage.add("checkbox", undefined, "Lock Format Ratio");
+    lockFormatRatio.value = false;
+    lockFormatRatio.enabled = false;
+    lockFormatRatio.helpTip =
+        "Keeps the current page width/height ratio when Anamorphic Format is active.";
+
     var fMarginTop = addMarginRow(pPage, "Top Margin", "1");
     var fMarginBottom = addMarginRow(pPage, "Bottom Margin", "1");
     var fMarginLeft = addMarginRow(pPage, "Left Margin", "1");
@@ -4303,30 +4299,19 @@ sold or otherwise used without prior written permission from the copyright holde
     var oTypeHeight =
         addRow(pPage, "Type Area Height", "", false, "mm");
 
-    var pLayout = addSection(col3, "Document Options");
-    var facingPages = pLayout.add("checkbox", undefined, "Facing Pages");
+    var facingPages = pPage.add("checkbox", undefined, "Facing Pages");
     facingPages.value = false;
 
+    var anamorphicFormat =
+        pPage.add("checkbox", undefined, "Anamorphic Format");
+    anamorphicFormat.value = false;
+    anamorphicFormat.helpTip =
+        "Enables editable page dimensions. Width and Height solve back to Column Leading and Row Leading while preserving the current page grid steps.";
+
+    var pLayout = addSection(col3, "Document Options");
     var useAMaster =
-        pLayout.add("checkbox", undefined, "Use A-Master");
+        pLayout.add("checkbox", undefined, "Use A-Parent");
     useAMaster.value = true;
-
-    var infoPage =
-        pLayout.add("checkbox", undefined, "Emetric Index Page");
-    infoPage.value = false;
-
-    var placeholderText =
-        pLayout.add("checkbox", undefined, "Placeholder Text");
-    placeholderText.value = false;
-    placeholderText.enabled = false;
-    placeholderText.helpTip =
-        "Creates a text frame matching the Type Area and fills it with InDesign placeholder text.";
-
-    var columnGuidesCheckbox =
-        pLayout.add("checkbox", undefined, "Apply Column Gutters");
-    columnGuidesCheckbox.value = true;
-    columnGuidesCheckbox.helpTip =
-        "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
 
     var snapToGrid =
         pLayout.add("checkbox", undefined, "Snap to Grid");
@@ -4339,6 +4324,17 @@ sold or otherwise used without prior written permission from the copyright holde
     var gridsInBack =
         pLayout.add("checkbox", undefined, "Grids in Back");
     gridsInBack.value = true;
+
+    var infoPage =
+        pLayout.add("checkbox", undefined, "Emetric Index Page");
+    infoPage.value = false;
+
+    var placeholderText =
+        pLayout.add("checkbox", undefined, "Placeholder Text");
+    placeholderText.value = false;
+    placeholderText.enabled = false;
+    placeholderText.helpTip =
+        "Creates a text frame matching the Type Area and fills it with InDesign placeholder text.";
 
     function updateDynamicFieldLabel(labelControl, text) {
         try {
@@ -4541,7 +4537,7 @@ sold or otherwise used without prior written permission from the copyright holde
             undefined,
             "Preview"
         );
-    compactPreviewCheckbox.value = false;
+    compactPreviewCheckbox.value = true;
     compactPreviewCheckbox.alignment =
         ["left", "center"];
 
@@ -4571,30 +4567,14 @@ sold or otherwise used without prior written permission from the copyright holde
     bottomBar.preferredSize.width =
         (UI_COLUMN_WIDTH * 3) + (columns.spacing * 2);
 
-    var previewGroup = bottomBar.add("group");
-    previewGroup.orientation = "row";
-    previewGroup.alignChildren = ["left", "center"];
-    previewGroup.alignment = ["left", "center"];
-    previewGroup.margins = [0, 3, 0, 0];
-
-    var previewCheckbox =
-        previewGroup.add("checkbox", undefined, "Preview");
-    previewCheckbox.value = false;
-    previewCheckbox.alignment = ["left", "center"];
-
-    var bottomCenter = bottomBar.add("group");
-    bottomCenter.orientation = "row";
-    bottomCenter.alignChildren = ["center", "center"];
-    bottomCenter.alignment = ["fill", "center"];
-
     var bottomInfoText =
-        bottomCenter.add(
+        bottomBar.add(
             "statictext",
             undefined,
             "v" + VERSION +
             ". Copyright © 2012–2026 by Kristian Möller, KTKM. All rights reserved."
         );
-    bottomInfoText.alignment = ["center", "center"];
+    bottomInfoText.alignment = ["fill", "center"];
 
     try {
         bottomInfoText.graphics.font =
@@ -4606,8 +4586,14 @@ sold or otherwise used without prior written permission from the copyright holde
     } catch (_) {}
 
     var buttons = bottomBar.add("group");
+    buttons.orientation = "row";
     buttons.alignment = ["right", "center"];
     buttons.alignChildren = ["right", "center"];
+
+    var previewCheckbox =
+        buttons.add("checkbox", undefined, "Preview");
+    previewCheckbox.value = true;
+    previewCheckbox.alignment = ["right", "center"];
 
     var compactViewButton =
         buttons.add(
@@ -5873,6 +5859,8 @@ sold or otherwise used without prior written permission from the copyright holde
                     Boolean(facingPages.value),
                 anamorphicFormat:
                     Boolean(anamorphicFormat.value),
+                lockFormatRatio:
+                    Boolean(lockFormatRatio.value),
                 useAMaster:
                     Boolean(useAMaster.value),
                 indexPage:
@@ -6438,6 +6426,11 @@ sold or otherwise used without prior written permission from the copyright holde
                 Boolean(
                     documentOptions
                         .anamorphicFormat
+                );
+            lockFormatRatio.value =
+                Boolean(
+                    documentOptions
+                        .lockFormatRatio
                 );
             if (!anamorphicFormat.value) {
                 exactPageWidthMM = null;
@@ -9081,6 +9074,14 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
+    function activeFormatRatioLock() {
+        try {
+            return activeAnamorphicMode() && Boolean(lockFormatRatio.value);
+        } catch (_) {
+            return false;
+        }
+    }
+
     function readValues() {
         return {
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
@@ -9226,9 +9227,11 @@ sold or otherwise used without prior written permission from the copyright holde
         fMarginLeft.factor.text = "1";
         fMarginRight.factor.text = "1";
         closePreviewDocument();
-        previewCheckbox.value = false;
+        previewCheckbox.value = true;
+        try { compactPreviewCheckbox.value = true; } catch (_) {}
         facingPages.value = false;
         anamorphicFormat.value = false;
+        lockFormatRatio.value = false;
         updateAnamorphicFormatControls();
         updateMarginLabels();
         useAMaster.value = true;
@@ -9303,6 +9306,11 @@ sold or otherwise used without prior written permission from the copyright holde
 
         try { oPageWidth.enabled = enabled; } catch (_) {}
         try { oPageHeight.enabled = enabled; } catch (_) {}
+        try { lockFormatRatio.enabled = enabled; } catch (_) {}
+
+        if (!enabled) {
+            try { lockFormatRatio.value = false; } catch (_) {}
+        }
 
         try {
             oPageWidth.helpTip = enabled
@@ -9311,7 +9319,38 @@ sold or otherwise used without prior written permission from the copyright holde
             oPageHeight.helpTip = enabled
                 ? "Editing Height changes Row Leading while preserving the current vertical page grid steps."
                 : "Enable Anamorphic Format in Page to edit Height.";
+            lockFormatRatio.helpTip = enabled
+                ? "Keeps the current page width/height ratio when either dimension is edited."
+                : "Enable Anamorphic Format to lock the page ratio.";
         } catch (_) {}
+    }
+
+    function formatRatioLockChanged() {
+        setDiagnosticAction(
+            activeFormatRatioLock()
+                ? "Enable Format Ratio Lock"
+                : "Disable Format Ratio Lock",
+            true
+        );
+
+        if (!activeAnamorphicMode()) {
+            try { lockFormatRatio.value = false; } catch (_) {}
+        }
+
+        if (
+            activeFormatRatioLock() &&
+            currentResult
+        ) {
+            exactPageWidthMM = currentResult.pageWidth;
+            exactPageHeightMM = currentResult.pageHeight;
+            exactLineSpaceMM = null;
+        }
+
+        updateAnamorphicFormatControls();
+        update();
+        syncCompactControls();
+        markDirty();
+        updatePreviewDocument();
     }
 
     function anamorphicFormatChanged() {
@@ -9325,6 +9364,14 @@ sold or otherwise used without prior written permission from the copyright holde
         if (!activeAnamorphicMode()) {
             exactPageWidthMM = null;
             exactPageHeightMM = null;
+            try { lockFormatRatio.value = false; } catch (_) {}
+        } else if (
+            activeFormatRatioLock() &&
+            currentResult
+        ) {
+            exactPageWidthMM = currentResult.pageWidth;
+            exactPageHeightMM = currentResult.pageHeight;
+            exactLineSpaceMM = null;
         }
 
         updateAnamorphicFormatControls();
@@ -9395,9 +9442,26 @@ sold or otherwise used without prior written permission from the copyright holde
                         : "Page Height"
                 );
 
+            var lockRatio =
+                activeFormatRatioLock() &&
+                currentResult &&
+                currentResult.pageWidth > 0 &&
+                currentResult.pageHeight > 0;
+
             if (field === oPageWidth) {
                 exactPageWidthMM =
                     targetDimensionMM;
+
+                if (lockRatio) {
+                    exactPageHeightMM =
+                        targetDimensionMM *
+                        currentResult.pageHeight /
+                        currentResult.pageWidth;
+
+                    // Locked ratio means Width also derives a new Height,
+                    // which changes Row Leading.
+                    exactLineSpaceMM = null;
+                }
             } else {
                 exactPageHeightMM =
                     targetDimensionMM;
@@ -9405,6 +9469,13 @@ sold or otherwise used without prior written permission from the copyright holde
                 // Page Height changes Leading through the unchanged Row Grid
                 // Group. It supersedes an explicitly edited Leading value.
                 exactLineSpaceMM = null;
+
+                if (lockRatio) {
+                    exactPageWidthMM =
+                        targetDimensionMM *
+                        currentResult.pageWidth /
+                        currentResult.pageHeight;
+                }
             }
 
             update();
@@ -9739,6 +9810,7 @@ sold or otherwise used without prior written permission from the copyright holde
         return {
             facingPages: facingPages.value,
             anamorphicFormat: activeAnamorphicMode(),
+            lockFormatRatio: activeFormatRatioLock(),
             useAMaster: useAMaster.value,
             addInformationPage: infoPage.value,
             addPlaceholderText: placeholderText.value,
@@ -9937,7 +10009,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 } catch (_) {}
             }
 
-            // Show the A-Master in Preview when that option is active.
+            // Show the A-Parent in Preview when that option is active.
             // LayoutWindow.activeSpread accepts either a Spread or MasterSpread.
             try {
                 if (
@@ -10037,7 +10109,14 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
-    resetButton.onClick = reset;
+    resetButton.onClick = function () {
+        reset();
+
+        if (previewCheckbox.value) {
+            previewFirstOpen = true;
+            schedulePreviewUpdate(50);
+        }
+    };
 
     function updatePreviewDocument() {
         schedulePreviewUpdate(PREVIEW_DELAY_MS);
@@ -10359,6 +10438,7 @@ sold or otherwise used without prior written permission from the copyright holde
         updateMarginLabels();
         optionChanged();
     };
+    lockFormatRatio.onClick = formatRatioLockChanged;
     anamorphicFormat.onClick = anamorphicFormatChanged;
     useAMaster.onClick = optionChanged;
     infoPage.onClick = optionChanged;
@@ -10605,6 +10685,11 @@ sold or otherwise used without prior written permission from the copyright holde
 
     w.show();
     refreshEmetricWindow(w);
+
+    if (previewCheckbox.value) {
+        previewFirstOpen = true;
+        schedulePreviewUpdate(50);
+    }
 
     if (storedUIState.compactMode) {
         setCompactMode(

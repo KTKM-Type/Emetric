@@ -2,9 +2,28 @@
 
 All notable changes to Emetric should be recorded in this file.
 
-The project uses [Semantic Versioning](https://semver.org/) with prerelease identifiers such as `beta.1` and `rc.1`.
+The project uses [Semantic Versioning](https://semver.org/) with prerelease identifiers such as `alpha.1`, `beta.1` and `rc.1`.
 
 ## [Unreleased]
+
+## [0.42.0-alpha.6] — 2026-07-14
+
+### Added
+
+- Added **Lock Format Ratio** in the Page section.
+- When **Anamorphic Format** and **Lock Format Ratio** are active, editing Width derives Height from the current format ratio, and editing Height derives Width from the current format ratio.
+- Preview is now enabled by default when the main window opens.
+
+### Changed
+
+- Moved **Anamorphic Format** to the end of the Page section.
+- Moved **Facing Pages** from Document Options to Page, directly before Anamorphic Format.
+- Renamed **Use A-Master** to **Use A-Parent**.
+- Moved **Apply Column Gutters** from Document Options to the Column Grid section.
+- Moved **Emetric Index Page** and **Placeholder Text** to the bottom of Document Options.
+- Moved **Preview** next to **Compact View** in the bottom control bar.
+- Moved the copyright/version text to the left side of the bottom bar.
+- New documents now set InDesign’s Preview Background preference to **Match to Theme Color**.
 
 ## [0.42.0-alpha.5] — 2026-07-14
 
