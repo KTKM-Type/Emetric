@@ -6,6 +6,15 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.5] — 2026-07-14
+
+### Changed
+
+- Moved **Anamorphic Format** from Document Options to the Page section.
+- Page Width and Page Height now solve back through the same page expansion structure as normal mode.
+- Editing page dimensions preserves margin-derived page grid steps instead of snapping back to the bare module grid.
+- Horizontal values follow Column Leading and vertical values follow Row Leading in Anamorphic Format.
+
 ## [0.42.0-alpha.4] — 2026-07-14
 
 ### Added

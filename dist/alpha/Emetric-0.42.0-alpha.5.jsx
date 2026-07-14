@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.4, 2026
+Version 0.42.0-alpha.5, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.4";
+    var VERSION = "0.42.0-alpha.5";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1298,59 +1298,70 @@ sold or otherwise used without prior written permission from the copyright holde
         positive(gridGroupVertical, "Grid Modules – Rows");
 
         // ANAMORPHIC FORMAT MODEL
-        // The reference workbook treats Page Width and Page Height as direct
-        // format inputs. Width determines the horizontal grid line while
-        // Height determines the vertical grid line and therefore type size.
-        // With neither dimension fixed, the original type-led Emetric model
-        // remains active and both axes share the typographic leading.
+        // In normal mode, Emetric is type-led: Metrics and Leading determine
+        // the grid and the page format. In Anamorphic Format, an edited page
+        // dimension solves back to the corresponding line value, but it uses
+        // the same format expansion as normal mode. This preserves the
+        // current page grid-step structure, including the active margins,
+        // instead of snapping the page back to the bare module grid.
         var metrics = v.metrics;
         var verticalLine =
             v.lineSpaceOverride !== null &&
             v.lineSpaceOverride !== undefined
                 ? v.lineSpaceOverride
                 : metrics / v.metricsRatio * v.lineRatio;
-        var verticalGridline;
+
+        var horizontalStepCount =
+            v.gridGroupHorizontal *
+            v.horizontalGroup +
+            v.marginLeftFactor -
+            1 +
+            v.marginRightFactor -
+            1;
+
+        var verticalStepCount =
+            gridGroupVertical *
+            v.verticalGroup +
+            v.marginTopFactor -
+            1 +
+            v.marginBottomFactor -
+            1;
+
+        positive(horizontalStepCount, "Horizontal page grid steps");
+        positive(verticalStepCount, "Vertical page grid steps");
 
         if (pageHeightOverride !== null) {
-            verticalGridline =
-                pageHeightOverride /
-                gridGroupVertical;
             verticalLine =
-                verticalGridline /
-                v.verticalGroup;
+                pageHeightOverride /
+                verticalStepCount;
 
-            // In the workbook, type size is derived from the vertical line:
-            // Metrics = Line × Metrics ratio / Line ratio.
+            // Type size follows Row Leading through the existing
+            // Metrics/Leading ratio.
             metrics =
                 verticalLine *
                 v.metricsRatio /
                 v.lineRatio;
-        } else {
-            verticalGridline =
-                verticalLine *
-                v.verticalGroup;
         }
 
         positive(metrics, "Metrics");
         positive(verticalLine, "Leading");
 
         var horizontalLine = verticalLine;
-        var horizontalGridline;
 
         if (pageWidthOverride !== null) {
-            horizontalGridline =
-                pageWidthOverride /
-                v.gridGroupHorizontal;
             horizontalLine =
-                horizontalGridline /
-                v.horizontalGroup;
-        } else {
-            horizontalGridline =
-                horizontalLine *
-                v.horizontalGroup;
+                pageWidthOverride /
+                horizontalStepCount;
         }
 
         positive(horizontalLine, "Horizontal Grid – Line");
+
+        var verticalGridline =
+            verticalLine *
+            v.verticalGroup;
+        var horizontalGridline =
+            horizontalLine *
+            v.horizontalGroup;
 
         // TYPE SIZE
         var typeRatios = v.typeRatios || DEFAULT_TYPE_RATIOS;
@@ -1382,11 +1393,11 @@ sold or otherwise used without prior written permission from the copyright holde
             offsetSourceValue(v.columnOffsetSourceIndex) / 2;
 
         // GRID MARGIN
-        // The anamorphic workbook derives both axes from the vertical line so
-        // gutters and margins retain the same physical typographic measure
-        // while the horizontal module grid may stretch independently.
+        // Horizontal values follow Column Leading; vertical values follow Row
+        // Leading. In normal mode these are identical. In Anamorphic Format
+        // they may diverge while the grid-step structure is preserved.
         var gridMarginHorizontal =
-            verticalLine - offsetGridHorizontal;
+            horizontalLine - offsetGridHorizontal;
         var gridMarginVertical =
             verticalLine - offsetGridVertical;
         var gridGutterHorizontal = gridMarginHorizontal * 2;
@@ -1407,10 +1418,10 @@ sold or otherwise used without prior written permission from the copyright holde
             verticalLine * v.marginBottomFactor -
             offsetGridVertical;
         var marginLeft =
-            verticalLine * v.marginLeftFactor -
+            horizontalLine * v.marginLeftFactor -
             offsetGridHorizontal;
         var marginRight =
-            verticalLine * v.marginRightFactor -
+            horizontalLine * v.marginRightFactor -
             offsetGridHorizontal;
 
         // FORMAT
@@ -4264,12 +4275,19 @@ sold or otherwise used without prior written permission from the copyright holde
     var pPage = addSection(col3, "Page");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
+
+    var anamorphicFormat =
+        pPage.add("checkbox", undefined, "Anamorphic Format");
+    anamorphicFormat.value = false;
+    anamorphicFormat.helpTip =
+        "Enables editable page dimensions. Width and Height solve back to Column Leading and Row Leading while preserving the current page grid steps.";
+
     var oSpread = addRow(pPage, "Spread", "", false, "mm");
 
     oPageWidth.helpTip =
-        "Fixes the page width and derives the horizontal grid line from Width ÷ Columns ÷ Column Group.";
+        "Fixes the page width and derives Column Leading from the current horizontal page grid steps.";
     oPageHeight.helpTip =
-        "Fixes the page height and derives the vertical grid line and type size from Height ÷ Rows ÷ Row Group.";
+        "Fixes the page height and derives Row Leading and type size from the current vertical page grid steps.";
     try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
     try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
     var oFormatRatio =
@@ -4288,12 +4306,6 @@ sold or otherwise used without prior written permission from the copyright holde
     var pLayout = addSection(col3, "Document Options");
     var facingPages = pLayout.add("checkbox", undefined, "Facing Pages");
     facingPages.value = false;
-
-    var anamorphicFormat =
-        pLayout.add("checkbox", undefined, "Anamorphic Format");
-    anamorphicFormat.value = false;
-    anamorphicFormat.helpTip =
-        "Enables editable page dimensions. Width derives Column Leading and Height derives Row Leading without changing Grid Group.";
 
     var useAMaster =
         pLayout.add("checkbox", undefined, "Use A-Master");
@@ -9294,11 +9306,11 @@ sold or otherwise used without prior written permission from the copyright holde
 
         try {
             oPageWidth.helpTip = enabled
-                ? "Editing Width changes Column Leading while preserving Columns and Column Grid Group."
-                : "Enable Anamorphic Format to edit Width.";
+                ? "Editing Width changes Column Leading while preserving the current horizontal page grid steps."
+                : "Enable Anamorphic Format in Page to edit Width.";
             oPageHeight.helpTip = enabled
-                ? "Editing Height changes Row Leading while preserving Rows and Row Grid Group."
-                : "Enable Anamorphic Format to edit Height.";
+                ? "Editing Height changes Row Leading while preserving the current vertical page grid steps."
+                : "Enable Anamorphic Format in Page to edit Height.";
         } catch (_) {}
     }
 
@@ -9367,7 +9379,8 @@ sold or otherwise used without prior written permission from the copyright holde
 
         // Page dimensions are anamorphic drivers, not structural grid inputs.
         // Preserve both Grid Group values exactly as entered while Width or
-        // Height recalculates the corresponding line measure.
+        // Height recalculates the corresponding line measure from the current
+        // page grid-step structure, including the active margins.
         var preservedRowGridGroup =
             String(fVerticalGroup.text);
         var preservedColumnGridGroup =
