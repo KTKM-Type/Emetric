@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.7, 2026
+Version 0.42.0-alpha.8, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.7";
+    var VERSION = "0.42.0-alpha.8";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1636,6 +1636,7 @@ sold or otherwise used without prior written permission from the copyright holde
         s.minimumSize.width = UI_UNIT_WIDTH;
         s.maximumSize.width = UI_UNIT_WIDTH;
         f.unitLabel = s;
+        f.label = l;
 
         return f;
     }
@@ -1688,7 +1689,11 @@ sold or otherwise used without prior written permission from the copyright holde
         ratioUnitSpacer.minimumSize.width = UI_UNIT_WIDTH;
         ratioUnitSpacer.maximumSize.width = UI_UNIT_WIDTH;
 
-        return { a: fa, b: fb };
+        return {
+            a: fa,
+            b: fb,
+            label: l
+        };
     }
 
     function addMarginRow(parent, label, factor, width) {
@@ -1735,6 +1740,47 @@ sold or otherwise used without prior written permission from the copyright holde
         dropdownUnitSpacer.maximumSize.width = UI_UNIT_WIDTH;
 
         return d;
+    }
+
+    function addSubheading(parent, text) {
+        var heading = parent.add(
+            "statictext",
+            undefined,
+            String(text || "")
+        );
+        heading.alignment = ["fill", "top"];
+
+        try {
+            heading.graphics.font =
+                ScriptUI.newFont(
+                    heading.graphics.font.name,
+                    "BOLD",
+                    10
+                );
+        } catch (_) {}
+
+        return heading;
+    }
+
+    function addNote(parent, text) {
+        var note = parent.add(
+            "statictext",
+            undefined,
+            String(text || "")
+        );
+        note.alignment = ["fill", "top"];
+        note.preferredSize.width = UI_COLUMN_WIDTH - 24;
+
+        try {
+            note.graphics.font =
+                ScriptUI.newFont(
+                    note.graphics.font.name,
+                    "REGULAR",
+                    9
+                );
+        } catch (_) {}
+
+        return note;
     }
 
 
@@ -4242,7 +4288,7 @@ sold or otherwise used without prior written permission from the copyright holde
         addRatioRow(pGridGroup, "Module Ratio", "2", "3", true);
 
     var columnGuidesCheckbox =
-        pGridGroup.add("checkbox", undefined, "Apply Column Gutters");
+        pGridGroup.add("checkbox", undefined, "Use Column Gutters in InDesign");
     columnGuidesCheckbox.value = true;
     columnGuidesCheckbox.helpTip =
         "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
@@ -4270,44 +4316,63 @@ sold or otherwise used without prior written permission from the copyright holde
     col3.maximumSize.width = UI_COLUMN_WIDTH;
 
     var pPage = addSection(col3, "Page");
+
+    addSubheading(pPage, "Format Mode");
+    var anamorphicFormat =
+        pPage.add("checkbox", undefined, "Anamorphic Format");
+    anamorphicFormat.value = false;
+    anamorphicFormat.helpTip =
+        "Switches Page from type-led output to editable page dimensions. Width controls Column Leading and Height controls Row Leading.";
+
+    var pageModeStatusText =
+        addNote(
+            pPage,
+            "Type-led Format: Metrics and Leading determine page size."
+        );
+
+    addSubheading(pPage, "Page Size");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
-    var oSpread = addRow(pPage, "Spread", "", false, "mm");
 
     oPageWidth.helpTip =
-        "Fixes the page width and derives Column Leading from the current horizontal page grid steps.";
+        "Enable Anamorphic Format to edit Width. Width then derives Column Leading from the current horizontal page grid steps.";
     oPageHeight.helpTip =
-        "Fixes the page height and derives Row Leading and type size from the current vertical page grid steps.";
+        "Enable Anamorphic Format to edit Height. Height then derives Row Leading and type size from the current vertical page grid steps.";
     try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
     try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
-    var oFormatRatio =
-        addRatioRow(pPage, "Format Ratio", "", "", false);
 
     var lockFormatRatio =
-        pPage.add("checkbox", undefined, "Lock Format Ratio");
+        pPage.add("checkbox", undefined, "Lock Page Ratio");
     lockFormatRatio.value = false;
     lockFormatRatio.enabled = false;
     lockFormatRatio.helpTip =
         "Keeps the current page width/height ratio when Anamorphic Format is active.";
 
+    var pageDriverStatusText =
+        addNote(
+            pPage,
+            "Current driver: Metrics → Page Format"
+        );
+
+    addSubheading(pPage, "Margins");
     var fMarginTop = addMarginRow(pPage, "Top Margin", "1");
     var fMarginBottom = addMarginRow(pPage, "Bottom Margin", "1");
     var fMarginLeft = addMarginRow(pPage, "Left Margin", "1");
     var fMarginRight = addMarginRow(pPage, "Right Margin", "1");
+
+    addSubheading(pPage, "Calculated");
+    var oSpread = addRow(pPage, "Spread", "", false, "mm");
+    var oFormatRatio =
+        addRatioRow(pPage, "Format Ratio", "", "", false);
 
     var oTypeWidth =
         addRow(pPage, "Type Area Width", "", false, "mm");
     var oTypeHeight =
         addRow(pPage, "Type Area Height", "", false, "mm");
 
+    addSubheading(pPage, "Page Setup");
     var facingPages = pPage.add("checkbox", undefined, "Facing Pages");
     facingPages.value = false;
-
-    var anamorphicFormat =
-        pPage.add("checkbox", undefined, "Anamorphic Format");
-    anamorphicFormat.value = false;
-    anamorphicFormat.helpTip =
-        "Enables editable page dimensions. Width and Height solve back to Column Leading and Row Leading while preserving the current page grid steps.";
 
     var pLayout = addSection(col3, "Document Options");
     var useAMaster =
@@ -4536,7 +4601,7 @@ sold or otherwise used without prior written permission from the copyright holde
         compactPreviewGroup.add(
             "checkbox",
             undefined,
-            "Preview"
+            "Live Preview"
         );
     compactPreviewCheckbox.value = true;
     compactPreviewCheckbox.alignment =
@@ -4606,7 +4671,7 @@ sold or otherwise used without prior written permission from the copyright holde
     previewGroup.spacing = 0;
 
     var previewCheckbox =
-        previewGroup.add("checkbox", undefined, "Preview");
+        previewGroup.add("checkbox", undefined, "Live Preview");
     previewCheckbox.value = true;
     previewCheckbox.alignment = ["left", "center"];
 
@@ -9335,6 +9400,17 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         try {
+            updateDynamicFieldLabel(
+                oVerticalLine.label,
+                enabled ? "Row Leading" : "Leading"
+            );
+            updateDynamicFieldLabel(
+                oHorizontalLine.label,
+                enabled ? "Column Leading" : "Leading"
+            );
+        } catch (_) {}
+
+        try {
             oPageWidth.helpTip = enabled
                 ? "Editing Width changes Column Leading while preserving the current horizontal page grid steps."
                 : "Enable Anamorphic Format in Page to edit Width.";
@@ -9345,13 +9421,28 @@ sold or otherwise used without prior written permission from the copyright holde
                 ? "Keeps the current page width/height ratio when either dimension is edited."
                 : "Enable Anamorphic Format to lock the page ratio.";
         } catch (_) {}
+
+        try {
+            pageModeStatusText.text = enabled
+                ? "Anamorphic Format: page size controls Row/Column Leading."
+                : "Type-led Format: Metrics and Leading determine page size.";
+
+            if (enabled) {
+                pageDriverStatusText.text = activeFormatRatioLock()
+                    ? "Current driver: Width/Height → locked Page Ratio → Leading"
+                    : "Current driver: Width → Column Leading; Height → Row Leading";
+            } else {
+                pageDriverStatusText.text =
+                    "Current driver: Metrics → Page Format";
+            }
+        } catch (_) {}
     }
 
     function formatRatioLockChanged() {
         setDiagnosticAction(
             activeFormatRatioLock()
-                ? "Enable Format Ratio Lock"
-                : "Disable Format Ratio Lock",
+                ? "Enable Page Ratio Lock"
+                : "Disable Page Ratio Lock",
             true
         );
 
@@ -10147,8 +10238,8 @@ sold or otherwise used without prior written permission from the copyright holde
     previewCheckbox.onClick = function () {
         setDiagnosticAction(
             previewCheckbox.value
-                ? "Enable Preview"
-                : "Disable Preview",
+                ? "Enable Live Preview"
+                : "Disable Live Preview",
             true
         );
 
