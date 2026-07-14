@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Beta — current source version `0.41.0-beta.2`
+> **Status:** Alpha — current source version `0.42.0-alpha.3`
 
 ## Main features
 
@@ -12,6 +12,9 @@ Emetric translates typographic proportions into document geometry. It can derive
 - **Emetric Decimal**, **Emetric Dozenal**, and **Custom Metric** sources
 - Typographic size, leading, vertical grid, and horizontal grid calculations
 - Modular columns and rows with proportional gutters and margins
+- Editable page width and height using the Anamorphic Format model
+- Page dimensions recalculate line measures without changing Row or Column Grid Group
+- InDesign Horizontal Gridline Division follows Column Leading in anamorphic formats
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
 - Optional facing pages, A-Master, index page, and placeholder text
 - Color themes, presets, and diagnostic logging
@@ -24,7 +27,7 @@ Emetric/
 ├── .github/                 Issue and pull-request templates
 ├── assets/                  Images and other repository assets
 ├── dist/                    Packaged beta and release files
-├── docs/                    Project and user documentation
+├── docs/                    Project, calculation, and user documentation
 ├── src/indesign/Emetric.jsx Active source file
 └── tests/                   Manual test documentation
 ```
@@ -34,6 +37,8 @@ The editable source is always:
 ```text
 src/indesign/Emetric.jsx
 ```
+
+The page-driven calculation relationships are documented in [`docs/anamorphic-format.md`](docs/anamorphic-format.md).
 
 Do not add version numbers or beta labels to the source filename. Versioned files belong in GitHub Releases or, when needed, under `dist/`.
 

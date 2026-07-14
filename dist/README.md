@@ -6,6 +6,8 @@ Suggested structure when local distribution files are needed:
 
 ```text
 dist/
+├── alpha/
+│   └── Emetric-0.42.0-alpha.3.jsx
 ├── beta/
 │   └── Emetric-0.42.0-beta.1.jsx
 └── stable/

@@ -11,7 +11,7 @@
 
 Run `tests/manual-test-checklist.md` in the supported InDesign environments available for the release.
 
-For a beta, pay particular attention to:
+For an alpha or beta, pay particular attention to:
 
 - presets created by earlier beta versions;
 - font enumeration and selected-font metrics;
@@ -24,7 +24,7 @@ For a beta, pay particular attention to:
 Copy the tested source file and give the distribution copy a versioned filename:
 
 ```text
-Emetric-0.42.0-beta.1.jsx
+Emetric-0.42.0-alpha.3.jsx
 ```
 
 Do not rename the file under `src/`.
@@ -34,7 +34,7 @@ Do not rename the file under `src/`.
 Use matching Git tags:
 
 ```text
-v0.42.0-beta.1
+v0.42.0-alpha.3
 v0.42.0-rc.1
 v1.0.0
 ```

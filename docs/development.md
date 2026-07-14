@@ -25,8 +25,8 @@ Update the metadata block near the beginning of the source:
 
 ```javascript
 var APP_NAME = "Emetric";
-var VERSION = "0.41.0-beta.2";
-var RELEASE_STATUS = "BETA";
+var VERSION = "0.42.0-alpha.3";
+var RELEASE_STATUS = "ALPHA";
 ```
 
 For a stable release, use a stable semantic version and set `RELEASE_STATUS` to an empty string.
