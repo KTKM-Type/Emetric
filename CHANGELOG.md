@@ -6,6 +6,14 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.7] — 2026-07-14
+
+### Changed
+
+- Moved **Apply Column Gutters** from Column Grid to Grid Modules.
+- Moved the main-window **Preview** checkbox 5 px downward for better optical alignment.
+- Added bottom-bar dividers between copyright/version information, Preview, and action buttons, matching Compact View.
+
 ## [0.42.0-alpha.6] — 2026-07-14
 
 ### Added
