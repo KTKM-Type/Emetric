@@ -6,6 +6,20 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.4] — 2026-07-14
+
+### Added
+
+- Added an **Anamorphic Format** checkbox under Document Options.
+- Page Width and Page Height are editable only when Anamorphic Format is enabled.
+- Presets now store the Anamorphic Format option.
+- Emetric Index reports whether Anamorphic Format is on or off.
+
+### Changed
+
+- Normal mode returns to the original type-led format calculation.
+- Anamorphic width and height overrides are ignored when Anamorphic Format is disabled.
+
 ## [0.42.0-alpha.3] — 2026-07-03
 
 ### Changed
