@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.5`
+> **Status:** Alpha — current source version `0.42.0-alpha.6`
 
 ## Main features
 
@@ -13,11 +13,12 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Typographic size, leading, vertical grid, and horizontal grid calculations
 - Modular columns and rows with proportional gutters and margins
 - Optional **Anamorphic Format** mode in the **Page** section
+- Optional **Lock Format Ratio** for anamorphic page resizing
 - In Anamorphic Format, page dimensions recalculate Column Leading and Row Leading from the current page grid-step structure
 - Margin-derived grid-step changes are preserved when page width or height is edited
 - InDesign Horizontal Gridline Division follows Column Leading when anamorphic dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
-- Optional facing pages, A-Master, index page, and placeholder text
+- Optional facing pages, A-Parent, index page, and placeholder text
 - Color themes, presets, and diagnostic logging
 - Creation of native InDesign guides, margins, columns, grids, and paragraph styles
 
@@ -27,7 +28,7 @@ Emetric translates typographic proportions into document geometry. It can derive
 Emetric/
 ├── .github/                 Issue and pull-request templates
 ├── assets/                  Images and other repository assets
-├── dist/                    Packaged beta and release files
+├── dist/                    Packaged alpha, beta, and release files
 ├── docs/                    Project, calculation, and user documentation
 ├── src/indesign/Emetric.jsx Active source file
 └── tests/                   Manual test documentation
