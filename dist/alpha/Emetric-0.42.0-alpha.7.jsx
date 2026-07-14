@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.6, 2026
+Version 0.42.0-alpha.7, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.6";
+    var VERSION = "0.42.0-alpha.7";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -4235,17 +4235,18 @@ sold or otherwise used without prior written permission from the copyright holde
         pHorizontal.add("checkbox", undefined, "Column Gutter Guides");
     guideColumnsCheckbox.value = true;
 
-    var columnGuidesCheckbox =
-        pHorizontal.add("checkbox", undefined, "Apply Column Gutters");
-    columnGuidesCheckbox.value = true;
-    columnGuidesCheckbox.helpTip =
-        "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
-
     var pGridGroup = addSection(col2, "Grid Modules");
     var fGridGroupH = addRow(pGridGroup, "Columns", "6", true, "");
     var fGridGroupV = addRow(pGridGroup, "Rows", "9", true, "");
     var fGridRatio =
         addRatioRow(pGridGroup, "Module Ratio", "2", "3", true);
+
+    var columnGuidesCheckbox =
+        pGridGroup.add("checkbox", undefined, "Apply Column Gutters");
+    columnGuidesCheckbox.value = true;
+    columnGuidesCheckbox.helpTip =
+        "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
+
     var oGridWidth = addRow(pGridGroup, "Grid Width", "", false, "mm");
     var oGridHeight = addRow(pGridGroup, "Grid Height", "", false, "mm");
     var oIntersectionW =
@@ -4567,6 +4568,16 @@ sold or otherwise used without prior written permission from the copyright holde
     bottomBar.preferredSize.width =
         (UI_COLUMN_WIDTH * 3) + (columns.spacing * 2);
 
+    function addBottomDivider() {
+        var divider =
+            bottomBar.add("panel");
+        divider.preferredSize = [1, 24];
+        divider.minimumSize = [1, 24];
+        divider.maximumSize = [1, 24];
+        divider.alignment = ["left", "center"];
+        return divider;
+    }
+
     var bottomInfoText =
         bottomBar.add(
             "statictext",
@@ -4585,15 +4596,26 @@ sold or otherwise used without prior written permission from the copyright holde
             );
     } catch (_) {}
 
+    addBottomDivider();
+
+    var previewGroup = bottomBar.add("group");
+    previewGroup.orientation = "row";
+    previewGroup.alignChildren = ["left", "center"];
+    previewGroup.alignment = ["left", "center"];
+    previewGroup.margins = [0, 5, 0, 0];
+    previewGroup.spacing = 0;
+
+    var previewCheckbox =
+        previewGroup.add("checkbox", undefined, "Preview");
+    previewCheckbox.value = true;
+    previewCheckbox.alignment = ["left", "center"];
+
+    addBottomDivider();
+
     var buttons = bottomBar.add("group");
     buttons.orientation = "row";
     buttons.alignment = ["right", "center"];
     buttons.alignChildren = ["right", "center"];
-
-    var previewCheckbox =
-        buttons.add("checkbox", undefined, "Preview");
-    previewCheckbox.value = true;
-    previewCheckbox.alignment = ["right", "center"];
 
     var compactViewButton =
         buttons.add(
