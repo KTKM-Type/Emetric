@@ -6,6 +6,22 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.8] — 2026-07-14
+
+### Added
+
+- Added Page subheadings for **Format Mode**, **Page Size**, **Margins**, **Calculated**, and **Page Setup**.
+- Added explanatory Page status text for the active calculation mode and current driver.
+- Added dynamic **Row Leading** and **Column Leading** labels when Anamorphic Format is active.
+
+### Changed
+
+- Moved **Anamorphic Format** to the top of Page as the primary format-mode choice.
+- Renamed **Lock Format Ratio** to **Lock Page Ratio** and placed it directly with Width and Height.
+- Moved Spread, Format Ratio, and Type Area values into a calculated-result area.
+- Renamed **Preview** to **Live Preview** in Full Settings and Compact View.
+- Renamed **Apply Column Gutters** to **Use Column Gutters in InDesign**.
+
 ## [0.42.0-alpha.7] — 2026-07-14
 
 ### Changed
