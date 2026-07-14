@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.3, 2026
+Version 0.42.0-alpha.4, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.3";
+    var VERSION = "0.42.0-alpha.4";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -2158,6 +2158,8 @@ sold or otherwise used without prior written permission from the copyright holde
             "Unit:\t" +
                 UNIT_OPTIONS[options.unitIndex].menuLabel + "\r" +
             "Metric Source:\t" + metricSourceLabel + "\r" +
+            "Anamorphic Format:\t" +
+                (options.anamorphicFormat ? "On" : "Off") + "\r" +
             fontSourceDetails +
             "\r" +
 
@@ -4287,6 +4289,12 @@ sold or otherwise used without prior written permission from the copyright holde
     var facingPages = pLayout.add("checkbox", undefined, "Facing Pages");
     facingPages.value = false;
 
+    var anamorphicFormat =
+        pLayout.add("checkbox", undefined, "Anamorphic Format");
+    anamorphicFormat.value = false;
+    anamorphicFormat.helpTip =
+        "Enables editable page dimensions. Width derives Column Leading and Height derives Row Leading without changing Grid Group.";
+
     var useAMaster =
         pLayout.add("checkbox", undefined, "Use A-Master");
     useAMaster.value = true;
@@ -5851,6 +5859,8 @@ sold or otherwise used without prior written permission from the copyright holde
             documentOptions: {
                 facingPages:
                     Boolean(facingPages.value),
+                anamorphicFormat:
+                    Boolean(anamorphicFormat.value),
                 useAMaster:
                     Boolean(useAMaster.value),
                 indexPage:
@@ -6369,7 +6379,13 @@ sold or otherwise used without prior written permission from the copyright holde
                             .exactHeightMM
                     );
 
-            if (exactPageHeightMM !== null) {
+            if (
+                exactPageHeightMM !== null &&
+                Boolean(
+                    documentOptions
+                        .anamorphicFormat
+                )
+            ) {
                 exactLineSpaceMM = null;
             }
 
@@ -6406,6 +6422,16 @@ sold or otherwise used without prior written permission from the copyright holde
                     documentOptions
                         .facingPages
                 );
+            anamorphicFormat.value =
+                Boolean(
+                    documentOptions
+                        .anamorphicFormat
+                );
+            if (!anamorphicFormat.value) {
+                exactPageWidthMM = null;
+                exactPageHeightMM = null;
+            }
+            updateAnamorphicFormatControls();
             useAMaster.value =
                 documentOptions
                     .useAMaster ===
@@ -9035,6 +9061,14 @@ sold or otherwise used without prior written permission from the copyright holde
 
     installInputFocusTracking(inputFields);
 
+    function activeAnamorphicMode() {
+        try {
+            return Boolean(anamorphicFormat.value);
+        } catch (_) {
+            return false;
+        }
+    }
+
     function readValues() {
         return {
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
@@ -9066,8 +9100,12 @@ sold or otherwise used without prior written permission from the copyright holde
             marginLeftFactor: parseNumber(fMarginLeft.factor.text, 2),
             marginRightFactor: parseNumber(fMarginRight.factor.text, 2),
 
-            pageWidthOverride: exactPageWidthMM,
-            pageHeightOverride: exactPageHeightMM
+            pageWidthOverride: activeAnamorphicMode()
+                ? exactPageWidthMM
+                : null,
+            pageHeightOverride: activeAnamorphicMode()
+                ? exactPageHeightMM
+                : null
         };
     }
 
@@ -9082,8 +9120,10 @@ sold or otherwise used without prior written permission from the copyright holde
         try {
             currentValues = readValues();
             currentResult = calculate(currentValues);
+            updateAnamorphicFormatControls();
 
             if (
+                activeAnamorphicMode() &&
                 exactPageHeightMM !== null &&
                 exactPageHeightMM !== undefined
             ) {
@@ -9176,6 +9216,8 @@ sold or otherwise used without prior written permission from the copyright holde
         closePreviewDocument();
         previewCheckbox.value = false;
         facingPages.value = false;
+        anamorphicFormat.value = false;
+        updateAnamorphicFormatControls();
         updateMarginLabels();
         useAMaster.value = true;
         infoPage.value = false;
@@ -9242,6 +9284,44 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
+    // ---------- Anamorphic format controls ----------
+
+    function updateAnamorphicFormatControls() {
+        var enabled = activeAnamorphicMode();
+
+        try { oPageWidth.enabled = enabled; } catch (_) {}
+        try { oPageHeight.enabled = enabled; } catch (_) {}
+
+        try {
+            oPageWidth.helpTip = enabled
+                ? "Editing Width changes Column Leading while preserving Columns and Column Grid Group."
+                : "Enable Anamorphic Format to edit Width.";
+            oPageHeight.helpTip = enabled
+                ? "Editing Height changes Row Leading while preserving Rows and Row Grid Group."
+                : "Enable Anamorphic Format to edit Height.";
+        } catch (_) {}
+    }
+
+    function anamorphicFormatChanged() {
+        setDiagnosticAction(
+            activeAnamorphicMode()
+                ? "Enable Anamorphic Format"
+                : "Disable Anamorphic Format",
+            true
+        );
+
+        if (!activeAnamorphicMode()) {
+            exactPageWidthMM = null;
+            exactPageHeightMM = null;
+        }
+
+        updateAnamorphicFormatControls();
+        update();
+        syncCompactControls();
+        markDirty();
+        updatePreviewDocument();
+    }
+
     // ---------- Editable anamorphic page dimensions ----------
 
     function isPageDimensionField(field) {
@@ -9279,6 +9359,12 @@ sold or otherwise used without prior written permission from the copyright holde
     }
 
     function updateFromPageDimension(field) {
+        if (!activeAnamorphicMode()) {
+            updateAnamorphicFormatControls();
+            update();
+            return;
+        }
+
         // Page dimensions are anamorphic drivers, not structural grid inputs.
         // Preserve both Grid Group values exactly as entered while Width or
         // Height recalculates the corresponding line measure.
@@ -9639,6 +9725,7 @@ sold or otherwise used without prior written permission from the copyright holde
     function getDocumentOptions() {
         return {
             facingPages: facingPages.value,
+            anamorphicFormat: activeAnamorphicMode(),
             useAMaster: useAMaster.value,
             addInformationPage: infoPage.value,
             addPlaceholderText: placeholderText.value,
@@ -10259,6 +10346,7 @@ sold or otherwise used without prior written permission from the copyright holde
         updateMarginLabels();
         optionChanged();
     };
+    anamorphicFormat.onClick = anamorphicFormatChanged;
     useAMaster.onClick = optionChanged;
     infoPage.onClick = optionChanged;
     placeholderText.onClick = optionChanged;
