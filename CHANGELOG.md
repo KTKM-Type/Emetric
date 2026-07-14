@@ -6,6 +6,16 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.9] — 2026-07-14
+
+### Changed
+
+- Moved **Format Mode** into its own section before **Page**.
+- Replaced visible mode/status explanation text with tooltips.
+- Renamed the former **Anamorphic Format** UI to **Custom Page Size**.
+- Kept **Type-led Format** as the default mode and **Custom Page Size** as the editable page-size mode.
+- Updated Emetric Index output to show **Format Mode**.
+
 ## [0.42.0-alpha.8] — 2026-07-14
 
 ### Added
