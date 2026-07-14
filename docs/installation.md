@@ -16,7 +16,7 @@ Emetric is an Adobe InDesign ExtendScript file.
 Download the versioned `.jsx` file attached to the relevant GitHub prerelease. A beta package may be named like this:
 
 ```text
-Emetric-0.41.0-beta.2.jsx
+Emetric-0.42.0-alpha.3.jsx
 ```
 
 Only run beta versions in documents that can be recreated or restored. Review the generated document before using it in production.
