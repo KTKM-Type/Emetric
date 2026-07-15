@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.42.0-alpha.20
+## 0.42.0-alpha.21
 
 - Placed **Use Column Gutter in InDesign** after **Column Gutter Guides** in **Grid Modules**.
 - Renamed the checkbox from **Use Column Gutters in InDesign** to **Use Column Gutter in InDesign**.

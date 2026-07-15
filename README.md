@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.20`
+> **Status:** Alpha — current source version `0.42.0-alpha.21`
 
 ## Main features
 
@@ -68,6 +68,6 @@ Based on Kristian Möller's Konstfack Master Project, 2012–2014.
 
 Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
 
-### 0.42.0-alpha.20 notes
+### 0.42.0-alpha.21 notes
 
 This iteration places **Use Column Gutter in InDesign** after **Column Gutter Guides** and applies the latest tooltip copy directly in the Emetric UI.
