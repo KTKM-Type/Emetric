@@ -1,6 +1,13 @@
 # Changelog
 
 
+## 0.42.0-alpha.15
+
+- Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
+- Editing **Vertical Grid Interval** or **Grid Module Height** now derives page height and type size while preserving Vertical Steps.
+- Editing **Horizontal Grid Interval** or **Grid Module Width** now derives page width while preserving Horizontal Steps.
+- Strengthened the ScriptUI repaint fix for **Baseline Grid** and **Document Grid** HEX fields when **Custom Metric** expands or collapses.
+
 ## 0.42.0-alpha.14
 
 - Renamed **Gridline Every** to **Grid Interval** across the interface, tooltips and index output.
@@ -13,6 +20,15 @@ All notable changes to Emetric should be recorded in this file.
 The project uses [Semantic Versioning](https://semver.org/) with prerelease identifiers such as `alpha.1`, `beta.1` and `rc.1`.
 
 ## [Unreleased]
+
+## [0.42.0-alpha.15] — 2026-07-15
+
+### Changed
+
+- Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
+- Editing vertical grid fields derives page height and type size from the existing vertical page-step structure.
+- Editing horizontal grid fields derives page width from the existing horizontal page-step structure.
+- Reinforced repaint handling for the lower color HEX fields after selecting **Custom Metric**.
 
 ## [0.42.0-alpha.14] — 2026-07-15
 

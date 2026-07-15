@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.14`
+> **Status:** Alpha — current source version `0.42.0-alpha.15`
 
 ## Main features
 
@@ -18,7 +18,7 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Vertical and Horizontal Grid sections use Grid Interval, Steps, Alignment, Grid Module Height/Width, Grid Height/Width, and Offset terminology
 - Optional **Lock Page Ratio** for custom page resizing
 - Refined bottom control bar with separated copyright, Preview, and action controls
-- In Custom Format, page dimensions recalculate Horizontal and Vertical Grid Interval values from the current page grid-step structure
+- In Custom Format, page dimensions and editable grid interval/module fields recalculate from the current page grid-step structure
 - Margin-derived grid-step changes are preserved when page width or height is edited
 - InDesign Horizontal Gridline Division follows the Horizontal Grid value “Grid Interval” when custom page dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
@@ -66,6 +66,6 @@ Based on Kristian Möller's Konstfack Master Project, 2012–2014.
 
 Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
 
-### 0.42.0-alpha.14 notes
+### 0.42.0-alpha.15 notes
 
-This iteration renames the grid interval controls, restores the previous preview background behavior, and fixes the color HEX field repaint issue when Custom Metric is selected.
+This iteration makes Grid Interval and Grid Module Height/Width editable in Custom Format and reinforces the color HEX field repaint fix when Custom Metric is selected.
