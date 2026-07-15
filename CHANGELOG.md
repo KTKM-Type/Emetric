@@ -6,6 +6,17 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.13] — 2026-07-15
+
+### Changed
+
+- Moved **Grid Width** to **Horizontal Grid** under **Grid Module Width**.
+- Moved **Grid Height** to **Vertical Grid** under **Grid Module Height**.
+- Moved **Facing Pages** back to **Document Options**.
+- Made **Page Ratio** editable in **Custom Format**; editing the ratio keeps Width as the anchor and derives Height.
+- Simplified margin labels to **Top**, **Bottom**, **Left**, **Right**, **Inside**, and **Outside**.
+- Moved **Module Area** before **Type Area**.
+
 ## [0.42.0-alpha.12] — 2026-07-15
 
 ### Changed

@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.12`
+> **Status:** Alpha — current source version `0.42.0-alpha.13`
 
 ## Main features
 
@@ -14,15 +14,15 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Direct modular Columns and Rows with calculated gutters and margins
 - **Emetric Mode** section placed before Measurement and Sources, with **Type Defined Format** and **Custom Format**
 - Emetric Mode uses tooltips rather than visible explanatory notes
-- Separate Page Size, Margins, Type Area, Grid Modules, and Module Area sections; Page Size uses Width, Height, Facing Pages, Page Ratio, and Lock Page Ratio
-- Vertical and Horizontal Grid sections use Gridline Every, Steps, Alignment, and Grid Module Height/Width terminology
+- Separate Page Size, Margins, Module Area, Type Area, and Grid Modules sections; Page Size uses Width, Height, editable Page Ratio, and Lock Page Ratio
+- Vertical and Horizontal Grid sections use Gridline Every, Steps, Alignment, Grid Module Height/Width, Grid Height/Width, and Offset terminology
 - Optional **Lock Page Ratio** for custom page resizing
 - Refined bottom control bar with separated copyright, Preview, and action controls
 - In Custom Format, page dimensions recalculate Horizontal and Vertical Gridline Every values from the current page grid-step structure
 - Margin-derived grid-step changes are preserved when page width or height is edited
 - InDesign Horizontal Gridline Division follows the Horizontal Grid value “Gridline Every” when custom page dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
-- Optional facing pages, A-Parent, index page, and placeholder text
+- Optional facing pages, A-Parent, index page, and placeholder text under Document Options
 - Color themes, presets, and diagnostic logging
 - Creation of native InDesign guides, margins, columns, grids, and paragraph styles
 
