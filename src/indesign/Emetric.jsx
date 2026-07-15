@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.9, 2026
+Version 0.42.0-alpha.10, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.9";
+    var VERSION = "0.42.0-alpha.10";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1299,7 +1299,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         // CUSTOM PAGE SIZE MODEL
         // In normal mode, Emetric is type-led: Metrics and Leading determine
-        // the grid and the page format. In Custom Page Size, an edited page
+        // the grid and the page format. In Custom Format, an edited page
         // dimension solves back to the corresponding line value, but it uses
         // the same format expansion as normal mode. This preserves the
         // current page grid-step structure, including the active margins,
@@ -1394,7 +1394,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         // GRID MARGIN
         // Horizontal values follow Column Leading; vertical values follow Row
-        // Leading. In normal mode these are identical. In Custom Page Size
+        // Leading. In normal mode these are identical. In Custom Format
         // they may diverge while the grid-step structure is preserved.
         var gridMarginHorizontal =
             horizontalLine - offsetGridHorizontal;
@@ -2215,10 +2215,10 @@ sold or otherwise used without prior written permission from the copyright holde
             "Unit:\t" +
                 UNIT_OPTIONS[options.unitIndex].menuLabel + "\r" +
             "Metric Source:\t" + metricSourceLabel + "\r" +
-            "Format Mode:\t" +
+            "Emetric Mode:\t" +
                 (options.anamorphicFormat
-                    ? "Custom Page Size"
-                    : "Type-led Format") + "\r" +
+                    ? "Custom Format"
+                    : "Type Defined Format") + "\r" +
             fontSourceDetails +
             "\r" +
 
@@ -4089,7 +4089,7 @@ sold or otherwise used without prior written permission from the copyright holde
         "The em-based reference size used for all typographic proportions.";
     try { fMetrics.label.helpTip = fMetrics.helpTip; } catch (_) {}
 
-    var pLineSpace = addSection(col1, "Leading");
+    var pLineSpace = addSection(col1, "Type Leading");
     var oLineSpace = addRow(pLineSpace, "Leading", "", true, "mm");
     oLineSpace.emetricThreeDecimalDisplay = true;
 
@@ -4232,7 +4232,7 @@ sold or otherwise used without prior written permission from the copyright holde
     ];
 
     var pVertical = addSection(col2, "Row Grid");
-    var oVerticalLine = addRow(pVertical, "Leading", "", false, "mm");
+    var oVerticalLine = addRow(pVertical, "Row Leading", "", false, "mm");
     var fVerticalGroup = addRow(pVertical, "Group", "6", true, "");
     var oVerticalGridline =
         addRow(pVertical, "Module Size", "", false, "mm");
@@ -4258,7 +4258,7 @@ sold or otherwise used without prior written permission from the copyright holde
     guideRowsCheckbox.value = true;
 
     var pHorizontal = addSection(col2, "Column Grid");
-    var oHorizontalLine = addRow(pHorizontal, "Leading", "", false, "mm");
+    var oHorizontalLine = addRow(pHorizontal, "Column Leading", "", false, "mm");
     var fHorizontalGroup = addRow(pHorizontal, "Group", "6", true, "");
     var oHorizontalGridline =
         addRow(pHorizontal, "Module Size", "", false, "mm");
@@ -4297,10 +4297,12 @@ sold or otherwise used without prior written permission from the copyright holde
 
     var oGridWidth = addRow(pGridGroup, "Grid Width", "", false, "mm");
     var oGridHeight = addRow(pGridGroup, "Grid Height", "", false, "mm");
+
+    var pModuleArea = addSection(col2, "Module Area");
     var oIntersectionW =
-        addRow(pGridGroup, "Module Area Width", "", false, "mm");
+        addRow(pModuleArea, "Width", "", false, "mm");
     var oIntersectionH =
-        addRow(pGridGroup, "Module Area Height", "", false, "mm");
+        addRow(pModuleArea, "Height", "", false, "mm");
 
     oVerticalGridline.helpTip =
         "Leading multiplied by Group; the height of one row module.";
@@ -4317,13 +4319,13 @@ sold or otherwise used without prior written permission from the copyright holde
     col3.minimumSize.width = UI_COLUMN_WIDTH;
     col3.maximumSize.width = UI_COLUMN_WIDTH;
 
-    var pFormatMode = addSection(col3, "Format Mode");
+    var pFormatMode = addSection(col3, "Emetric Mode");
 
     var typeLedFormat =
         pFormatMode.add(
             "radiobutton",
             undefined,
-            "Type-led Format"
+            "Type Defined Format"
         );
     typeLedFormat.value = true;
     typeLedFormat.helpTip =
@@ -4333,51 +4335,46 @@ sold or otherwise used without prior written permission from the copyright holde
         pFormatMode.add(
             "radiobutton",
             undefined,
-            "Custom Page Size"
+            "Custom Format"
         );
     anamorphicFormat.value = false;
     anamorphicFormat.helpTip =
         "Page Width and Height define Column and Row Leading.";
 
-    var pPage = addSection(col3, "Page");
-
-    addSubheading(pPage, "Page Size");
+    var pPage = addSection(col3, "Page Size");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
-
-    oPageWidth.helpTip =
-        "Custom Page Size: Width derives Column Leading from the current horizontal page grid steps.";
-    oPageHeight.helpTip =
-        "Custom Page Size: Height derives Row Leading and type size from the current vertical page grid steps.";
-    try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
-    try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
+    var oSpread = addRow(pPage, "Spread", "", false, "mm");
+    var oFormatRatio =
+        addRatioRow(pPage, "Format Ratio", "", "", false);
+    var facingPages = pPage.add("checkbox", undefined, "Facing Pages");
+    facingPages.value = false;
 
     var lockFormatRatio =
         pPage.add("checkbox", undefined, "Lock Page Ratio");
     lockFormatRatio.value = false;
     lockFormatRatio.enabled = false;
     lockFormatRatio.helpTip =
-        "Keeps the current page width/height ratio when Custom Page Size is active.";
+        "Keeps the current page width/height ratio when Custom Format is active.";
 
-    addSubheading(pPage, "Margins");
-    var fMarginTop = addMarginRow(pPage, "Top Margin", "1");
-    var fMarginBottom = addMarginRow(pPage, "Bottom Margin", "1");
-    var fMarginLeft = addMarginRow(pPage, "Left Margin", "1");
-    var fMarginRight = addMarginRow(pPage, "Right Margin", "1");
+    oPageWidth.helpTip =
+        "Custom Format: Width derives Column Leading from the current horizontal page grid steps.";
+    oPageHeight.helpTip =
+        "Custom Format: Height derives Row Leading and type size from the current vertical page grid steps.";
+    try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
+    try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
 
-    addSubheading(pPage, "Calculated");
-    var oSpread = addRow(pPage, "Spread", "", false, "mm");
-    var oFormatRatio =
-        addRatioRow(pPage, "Format Ratio", "", "", false);
+    var pMargins = addSection(col3, "Margins");
+    var fMarginTop = addMarginRow(pMargins, "Top Margin", "1");
+    var fMarginBottom = addMarginRow(pMargins, "Bottom Margin", "1");
+    var fMarginLeft = addMarginRow(pMargins, "Left Margin", "1");
+    var fMarginRight = addMarginRow(pMargins, "Right Margin", "1");
 
+    var pTypeArea = addSection(col3, "Type Area");
     var oTypeWidth =
-        addRow(pPage, "Type Area Width", "", false, "mm");
+        addRow(pTypeArea, "Width", "", false, "mm");
     var oTypeHeight =
-        addRow(pPage, "Type Area Height", "", false, "mm");
-
-    addSubheading(pPage, "Page Setup");
-    var facingPages = pPage.add("checkbox", undefined, "Facing Pages");
-    facingPages.value = false;
+        addRow(pTypeArea, "Height", "", false, "mm");
 
     var pLayout = addSection(col3, "Document Options");
     var useAMaster =
@@ -4447,8 +4444,8 @@ sold or otherwise used without prior written permission from the copyright holde
         // Do not re-layout the complete Margin panel. That could shift the
         // unchanged Top and Bottom rows when the longer labels are shown.
         try {
-            if (pPage.window && pPage.window.update) {
-                pPage.window.update();
+            if (pMargins.window && pMargins.window.update) {
+                pMargins.window.update();
             }
         } catch (_) {}
     }
@@ -4606,7 +4603,7 @@ sold or otherwise used without prior written permission from the copyright holde
         compactPreviewGroup.add(
             "checkbox",
             undefined,
-            "Live Preview"
+            "Preview"
         );
     compactPreviewCheckbox.value = true;
     compactPreviewCheckbox.alignment =
@@ -4676,7 +4673,7 @@ sold or otherwise used without prior written permission from the copyright holde
     previewGroup.spacing = 0;
 
     var previewCheckbox =
-        previewGroup.add("checkbox", undefined, "Live Preview");
+        previewGroup.add("checkbox", undefined, "Preview");
     previewCheckbox.value = true;
     previewCheckbox.alignment = ["left", "center"];
 
@@ -9392,7 +9389,7 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
-    // ---------- Custom page size controls ----------
+    // ---------- Custom format controls ----------
 
     function updateAnamorphicFormatControls() {
         var enabled = activeAnamorphicMode();
@@ -9410,24 +9407,24 @@ sold or otherwise used without prior written permission from the copyright holde
         try {
             updateDynamicFieldLabel(
                 oVerticalLine.label,
-                enabled ? "Row Leading" : "Leading"
+                "Row Leading"
             );
             updateDynamicFieldLabel(
                 oHorizontalLine.label,
-                enabled ? "Column Leading" : "Leading"
+                "Column Leading"
             );
         } catch (_) {}
 
         try {
             oPageWidth.helpTip = enabled
                 ? "Editing Width changes Column Leading while preserving the current horizontal page grid steps."
-                : "Choose Custom Page Size in Format Mode to edit Width.";
+                : "Choose Custom Format in Emetric Mode to edit Width.";
             oPageHeight.helpTip = enabled
                 ? "Editing Height changes Row Leading while preserving the current vertical page grid steps."
-                : "Choose Custom Page Size in Format Mode to edit Height.";
+                : "Choose Custom Format in Emetric Mode to edit Height.";
             lockFormatRatio.helpTip = enabled
                 ? "Keeps the current page width/height ratio when either dimension is edited."
-                : "Choose Custom Page Size to lock the page ratio.";
+                : "Choose Custom Format to lock the page ratio.";
         } catch (_) {}
     }
 
@@ -9462,8 +9459,8 @@ sold or otherwise used without prior written permission from the copyright holde
     function anamorphicFormatChanged() {
         setDiagnosticAction(
             activeAnamorphicMode()
-                ? "Enable Custom Page Size"
-                : "Disable Custom Page Size",
+                ? "Enable Custom Format"
+                : "Disable Custom Format",
             true
         );
 
@@ -9487,7 +9484,7 @@ sold or otherwise used without prior written permission from the copyright holde
         updatePreviewDocument();
     }
 
-    // ---------- Editable custom page dimensions ----------
+    // ---------- Editable custom format dimensions ----------
 
     function isPageDimensionField(field) {
         return (
@@ -10231,8 +10228,8 @@ sold or otherwise used without prior written permission from the copyright holde
     previewCheckbox.onClick = function () {
         setDiagnosticAction(
             previewCheckbox.value
-                ? "Enable Live Preview"
-                : "Disable Live Preview",
+                ? "Enable Preview"
+                : "Disable Preview",
             true
         );
 

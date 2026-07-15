@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.9`
+> **Status:** Alpha — current source version `0.42.0-alpha.10`
 
 ## Main features
 
@@ -12,13 +12,13 @@ Emetric translates typographic proportions into document geometry. It can derive
 - **Emetric Decimal**, **Emetric Dozenal**, and **Custom Metric** sources
 - Typographic size, leading, vertical grid, and horizontal grid calculations
 - Modular columns and rows with proportional gutters and margins
-- Separate **Format Mode** section with **Type-led Format** and **Custom Page Size**
-- Format Mode uses tooltips rather than visible explanatory notes
-- Clear Page flow with Page Size, Margins, Calculated values, and Page Setup
-- Dynamic Row Leading and Column Leading labels in Custom Page Size
+- Separate **Emetric Mode** section with **Type Defined Format** and **Custom Format**
+- Emetric Mode uses tooltips rather than visible explanatory notes
+- Separate Page Size, Margins, Type Area, and Module Area sections
+- Persistent Row Leading and Column Leading labels
 - Optional **Lock Page Ratio** for custom page resizing
-- Refined bottom control bar with separated copyright, Live Preview, and action controls
-- In Custom Page Size, page dimensions recalculate Column Leading and Row Leading from the current page grid-step structure
+- Refined bottom control bar with separated copyright, Preview, and action controls
+- In Custom Format, page dimensions recalculate Column Leading and Row Leading from the current page grid-step structure
 - Margin-derived grid-step changes are preserved when page width or height is edited
 - InDesign Horizontal Gridline Division follows Column Leading when custom page dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points

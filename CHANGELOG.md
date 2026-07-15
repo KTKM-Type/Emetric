@@ -6,6 +6,18 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.10] — 2026-07-15
+
+### Changed
+
+- Renamed **Format Mode** to **Emetric Mode**.
+- Renamed **Type-led Format** to **Type Defined Format** and **Custom Page Size** to **Custom Format**.
+- Made **Page Size**, **Margins**, **Type Area**, and **Module Area** separate sections.
+- Reordered Page Size controls as Width, Height, Spread, Format Ratio, Facing Pages, and Lock Page Ratio.
+- Renamed the **Leading** section to **Type Leading**.
+- Kept **Row Leading** and **Column Leading** labels visible in both Emetric modes.
+- Renamed **Live Preview** back to **Preview**.
+
 ## [0.42.0-alpha.9] — 2026-07-14
 
 ### Changed
