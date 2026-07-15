@@ -1,7 +1,7 @@
 # Changelog
 
 
-## 0.42.0-alpha.15
+## 0.42.0-alpha.16
 
 - Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
 - Editing **Vertical Grid Interval** or **Grid Module Height** now derives page height and type size while preserving Vertical Steps.
@@ -21,7 +21,7 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
-## [0.42.0-alpha.15] — 2026-07-15
+## [0.42.0-alpha.16] — 2026-07-15
 
 ### Changed
 
