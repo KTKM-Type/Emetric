@@ -1,12 +1,20 @@
 # Changelog
 
+
+## 0.42.0-alpha.14
+
+- Renamed **Gridline Every** to **Grid Interval** across the interface, tooltips and index output.
+- Restored the preview pasteboard/background behavior to the earlier white/default setting.
+- Fixed a ScriptUI repaint issue where the **Baseline Grid** and **Document Grid** HEX fields could disappear after choosing **Custom Metric**.
+
+
 All notable changes to Emetric should be recorded in this file.
 
 The project uses [Semantic Versioning](https://semver.org/) with prerelease identifiers such as `alpha.1`, `beta.1` and `rc.1`.
 
 ## [Unreleased]
 
-## [0.42.0-alpha.13] — 2026-07-15
+## [0.42.0-alpha.14] — 2026-07-15
 
 ### Changed
 
@@ -23,7 +31,7 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 - Moved **Emetric Mode** before **Measurement and Sources**.
 - Renamed grid controls to **Alignment** and **Steps** in Vertical and Horizontal Grid.
-- Reordered Vertical and Horizontal Grid controls as Gridline Every, Steps, Alignment, Grid Module Height/Width, Offset, and Grid Guides.
+- Reordered Vertical and Horizontal Grid controls as Grid Interval, Steps, Alignment, Grid Module Height/Width, Offset, and Grid Guides.
 - Removed **Module Ratio** from Grid Modules; Rows is now a direct editable module value.
 - Moved **Grid Width** into Vertical Grid under Grid Module Height.
 - Moved Grid Modules checkboxes to the end of the section.
@@ -36,9 +44,9 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 - Renamed **Row Grid** to **Vertical Grid** and **Column Grid** to **Horizontal Grid**.
 - Renamed grid controls: **Group** to **Grid Steps**, **Offset Source** to **Grid Align**, and **Row/Column Grid Lines** to **Grid Guides**.
-- Renamed **Row Leading** and **Column Leading** to **Gridline Every** in the Vertical and Horizontal Grid sections.
+- Renamed **Row Leading** and **Column Leading** to **Grid Interval** in the Vertical and Horizontal Grid sections.
 - Renamed **Module Size** to **Grid Module Height** in Vertical Grid and **Grid Module Width** in Horizontal Grid.
-- Reordered Vertical and Horizontal Grid controls as Grid Align, Grid Steps, Grid Module Height/Width, and Gridline Every.
+- Reordered Vertical and Horizontal Grid controls as Grid Align, Grid Steps, Grid Module Height/Width, and Grid Interval.
 - Moved Row Margin, Row Gutter, Row Gutter Guides, Column Margin, Column Gutter, and Column Gutter Guides to **Grid Modules**.
 
 ## [0.42.0-alpha.10] — 2026-07-15
