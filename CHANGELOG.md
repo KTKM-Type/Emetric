@@ -1,10 +1,14 @@
 # Changelog
+## 0.42.0-alpha.23
 
-## 0.42.0-alpha.21
+- Set [Basic Paragraph] to Align Left for Placeholder Text output.
+- Shortened the visible Metrics & Leading Ratio label to M & L Ratio while keeping the full tooltip text.
 
-- Placed **Use Column Gutter in InDesign** after **Column Gutter Guides** in **Grid Modules**.
-- Renamed the checkbox from **Use Column Gutters in InDesign** to **Use Column Gutter in InDesign**.
-- Applied the latest tooltip inventory copy directly to the Emetric UI.
+## 0.42.0-alpha.22
+
+- Set Placeholder Text paragraph direction explicitly to **Left-to-Right** through **[Basic Paragraph]**.
+- Keep Placeholder Text language aligned with the user’s default InDesign language instead of hard-coding a language.
+- Preserve the alpha.21 behavior where Placeholder Text uses **[Basic Paragraph]** rather than a separate paragraph style.
 
 ## 0.42.0-alpha.18
 

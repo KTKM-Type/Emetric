@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.21, 2026
+Version 0.42.0-alpha.23, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.21";
+    var VERSION = "0.42.0-alpha.23";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -2206,6 +2206,29 @@ sold or otherwise used without prior written permission from the copyright holde
                 }
             } catch (_) {}
 
+            try {
+                frame.parentStory.storyDirection =
+                    StoryDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+            } catch (_) {}
+
+            try {
+                var placeholderParagraphs =
+                    frame.parentStory.paragraphs.everyItem();
+
+                placeholderParagraphs.paragraphDirection =
+                    ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+
+                if (
+                    placeholderStyle &&
+                    placeholderStyle.isValid
+                ) {
+                    applyLanguageIfAvailable(
+                        placeholderParagraphs,
+                        placeholderStyle.appliedLanguage
+                    );
+                }
+            } catch (_) {}
+
             // The first baseline follows the selected Vertical Alignment source.
             try {
                 var tfp = frame.textFramePreferences;
@@ -2287,7 +2310,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
             "Type Leading\r" +
             "Leading:\t" + selectedMeasure(r.lineSpace) + "\r" +
-            "Metrics & Leading Ratio:\t" +
+            "M & L Ratio:\t" +
                 formatNormalizedRatio(
                     v.metricsRatio,
                     v.lineRatio
@@ -2673,10 +2696,66 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
+    function validLanguage(language) {
+        if (!language) {
+            return false;
+        }
+
+        try {
+            if (language.isValid !== undefined) {
+                return Boolean(language.isValid);
+            }
+        } catch (_) {}
+
+        return true;
+    }
+
+    function getDefaultInDesignLanguage(doc) {
+        var language = null;
+
+        try {
+            language = doc.textDefaults.appliedLanguage;
+            if (validLanguage(language)) {
+                return language;
+            }
+        } catch (_) {}
+
+        try {
+            language = app.textDefaults.appliedLanguage;
+            if (validLanguage(language)) {
+                return language;
+            }
+        } catch (_) {}
+
+        return null;
+    }
+
+    function applyLeftToRightParagraphDirection(target) {
+        if (!target) {
+            return;
+        }
+
+        try {
+            target.paragraphDirection =
+                ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+        } catch (_) {}
+    }
+
+    function applyLanguageIfAvailable(target, language) {
+        if (!target || !validLanguage(language)) {
+            return;
+        }
+
+        try {
+            target.appliedLanguage = language;
+        } catch (_) {}
+    }
+
     function applyDocumentDefaultStyles(doc, r, options) {
         var fontRecord = options.selectedFontRecord || null;
         var pointSize = exportPointValue(r.metrics, options.unitIndex);
         var leading = exportPointValue(r.lineSpace, options.unitIndex);
+        var defaultLanguage = getDefaultInDesignLanguage(doc);
 
         // Document text defaults control the actual font and size used
         // when new text is created without an explicit style.
@@ -2723,6 +2802,19 @@ sold or otherwise used without prior written permission from the copyright holde
                 try {
                     paragraphStyle.leading = leading;
                 } catch (_) {}
+
+                try {
+                    paragraphStyle.justification = Justification.LEFT_ALIGN;
+                } catch (_) {}
+
+                // Placeholder Text uses [Basic Paragraph]. Keep it explicitly
+                // left-aligned and left-to-right while preserving the user's
+                // default InDesign language.
+                applyLeftToRightParagraphDirection(paragraphStyle);
+                applyLanguageIfAvailable(
+                    paragraphStyle,
+                    defaultLanguage
+                );
             }
         } catch (_) {}
 
@@ -4234,7 +4326,7 @@ sold or otherwise used without prior written permission from the copyright holde
     oLineSpace.emetricThreeDecimalDisplay = true;
 
     var fMetricsLine =
-        addRatioRow(pLineSpace, "Metrics & Leading Ratio", "1", "1,25", true);
+        addRatioRow(pLineSpace, "M & L Ratio", "1", "1,25", true);
 
     var colorPanel = addSection(col1, "Colors");
 
