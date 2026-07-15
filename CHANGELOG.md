@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.0-alpha.19
+
+- Placed **Use Column Gutter in InDesign** after **Column Gutter Guides** in **Grid Modules**.
+- Renamed the checkbox from **Use Column Gutters in InDesign** to **Use Column Gutter in InDesign**.
+- Applied the latest tooltip inventory copy directly to the Emetric UI.
+
 ## 0.42.0-alpha.18
 
 - Centered **Horizontal Grid Guides** over the **Type Area** instead of the full page, fixing guide placement when left and right margins differ.

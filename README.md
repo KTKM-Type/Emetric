@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.18`
+> **Status:** Alpha — current source version `0.42.0-alpha.19`
 
 ## Main features
 
@@ -20,7 +20,7 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Refined bottom control bar with separated copyright, Preview, and action controls
 - In Custom Format, page dimensions and editable grid interval/module fields recalculate from the current page grid-step structure
 - Preview uses the restored live update behavior from before alpha.16
-- Tooltips are assigned throughout the UI; unused tooltip slots display `[Empty]`
+- Tooltips are assigned throughout the UI from the latest tooltip inventory; unused tooltip slots display `[Empty]`
 - Margin-derived grid-step changes are preserved when page width or height is edited
 - InDesign Horizontal Gridline Division follows the Horizontal Grid value “Grid Interval” when custom page dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
@@ -68,6 +68,6 @@ Based on Kristian Möller's Konstfack Master Project, 2012–2014.
 
 Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
 
-### 0.42.0-alpha.18 notes
+### 0.42.0-alpha.19 notes
 
-This iteration centers Horizontal Grid Guides over the Type Area when left and right margins differ, and refreshes the tooltip inventory by applying the latest proposed tooltip copy to the main tooltip column.
+This iteration places **Use Column Gutter in InDesign** after **Column Gutter Guides** and applies the latest tooltip copy directly in the Emetric UI.
