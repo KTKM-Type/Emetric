@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.9, 2026
+Version 0.42.0-alpha.23, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.9";
+    var VERSION = "0.42.0-alpha.23";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -804,6 +804,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var selector = {
             group: group,
+            label: caption,
             preview: preview,
             hexField: hexField,
             hex: normalizeHex(defaultHex),
@@ -1163,6 +1164,17 @@ sold or otherwise used without prior written permission from the copyright holde
         return s.replace(".", ",");
     }
 
+    function formatNormalizedRatio(firstValue, secondValue) {
+        var first = Number(firstValue);
+        var second = Number(secondValue);
+
+        if (!(first > 0)) {
+            return formatNumber(first) + ":" + formatNumber(second);
+        }
+
+        return "1:" + formatNumber(second / first);
+    }
+
     function formatMeasureNumber(value, unitIndex) {
         // Display all measurement values with up to three decimals.
         // Conversion calculations retain full precision internally.
@@ -1261,14 +1273,12 @@ sold or otherwise used without prior written permission from the copyright holde
 
     function calculate(v) {
         positive(v.metrics, "Metrics");
-        positive(v.metricsRatio, "Metrics/Line, första värdet");
-        positive(v.lineRatio, "Metrics/Line, andra värdet");
-        positive(v.verticalGroup, "Vertical Grid – Group");
-        positive(v.horizontalGroup, "Horizontal Grid – Group");
+        positive(v.metricsRatio, "Metrics & Leading Ratio, first value");
+        positive(v.lineRatio, "Metrics & Leading Ratio, second value");
+        positive(v.verticalGroup, "Vertical Grid – Steps");
+        positive(v.horizontalGroup, "Horizontal Grid – Steps");
         positive(v.gridGroupHorizontal, "Grid Modules – Columns");
         positive(v.gridGroupVertical, "Grid Modules – Rows");
-        positive(v.gridRatioHorizontal, "Grid Modules – Module Ratio, första värdet");
-        positive(v.gridRatioVertical, "Grid Modules – Module Ratio, andra värdet");
         nonNegative(v.marginTopFactor, "Top");
         nonNegative(v.marginBottomFactor, "Bottom");
         nonNegative(v.marginLeftFactor, "Left");
@@ -1286,20 +1296,14 @@ sold or otherwise used without prior written permission from the copyright holde
                 : null;
 
         // GRID MODULES
-        // Rows may either follow the module ratio or be set explicitly.
-        var gridGroupVertical =
-            v.gridRowsOverride !== null &&
-            v.gridRowsOverride !== undefined
-                ? v.gridRowsOverride
-                : v.gridGroupHorizontal /
-                    v.gridRatioHorizontal *
-                    v.gridRatioVertical;
+        // Rows are now a direct grid module value rather than a derived module ratio.
+        var gridGroupVertical = v.gridGroupVertical;
 
         positive(gridGroupVertical, "Grid Modules – Rows");
 
         // CUSTOM PAGE SIZE MODEL
         // In normal mode, Emetric is type-led: Metrics and Leading determine
-        // the grid and the page format. In Custom Page Size, an edited page
+        // the grid and the page format. In Custom Format, an edited page
         // dimension solves back to the corresponding line value, but it uses
         // the same format expansion as normal mode. This preserves the
         // current page grid-step structure, including the active margins,
@@ -1335,7 +1339,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 pageHeightOverride /
                 verticalStepCount;
 
-            // Type size follows Row Leading through the existing
+            // Type size follows Vertical Grid Interval through the existing
             // Metrics/Leading ratio.
             metrics =
                 verticalLine *
@@ -1354,7 +1358,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 horizontalStepCount;
         }
 
-        positive(horizontalLine, "Horizontal Grid – Line");
+        positive(horizontalLine, "Horizontal Grid – Grid Interval");
 
         var verticalGridline =
             verticalLine *
@@ -1393,8 +1397,8 @@ sold or otherwise used without prior written permission from the copyright holde
             offsetSourceValue(v.columnOffsetSourceIndex) / 2;
 
         // GRID MARGIN
-        // Horizontal values follow Column Leading; vertical values follow Row
-        // Leading. In normal mode these are identical. In Custom Page Size
+        // Horizontal values follow Horizontal Grid Interval; vertical values follow
+        // Vertical Grid Interval. In normal mode these are identical. In Custom Format
         // they may diverge while the grid-step structure is preserved.
         var gridMarginHorizontal =
             horizontalLine - offsetGridHorizontal;
@@ -1849,9 +1853,12 @@ sold or otherwise used without prior written permission from the copyright holde
         startY = r.pageHeight - r.gridHeight -
                  (r.marginBottom + r.offsetGridVertical - r.verticalLine);
 
-        // More direct and stable values derived from the workbook:
-        // left excess = pageWidth - gridWidth split by the two equal side factors.
-        startX = (r.pageWidth - r.gridWidth) / 2;
+        // More direct and stable values derived from the workbook.
+        // Horizontal Grid Guides are centered over the Type Area, not the page.
+        // This keeps the guide structure visually centered when left and right
+        // margins use different values.
+        startX = r.marginLeft + ((r.typeAreaWidth - r.gridWidth) / 2);
+
         // top excess is page height contribution from top factor.
         startY = r.marginTop + r.offsetGridVertical - r.verticalLine
                  + r.offsetGridVertical;
@@ -1988,65 +1995,103 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
-    function createParagraphStyles(doc, r, exportUnitIndex) {
-        var info =
-            doc.paragraphStyles.itemByName("Emetric Information");
+    function createParagraphStyles(doc, r, exportUnitIndex, options) {
+        var info = null;
 
-        if (!validObject(info)) {
-            info = doc.paragraphStyles.add({
-                name: "Emetric Information"
-            });
+        if (
+            options &&
+            options.addInformationPage
+        ) {
+            info =
+                doc.paragraphStyles.itemByName("Emetric Data");
+
+            if (!validObject(info)) {
+                try {
+                    var oldInfo =
+                        doc.paragraphStyles.itemByName("Emetric Information");
+
+                    if (validObject(oldInfo)) {
+                        oldInfo.name = "Emetric Data";
+                        info = oldInfo;
+                    }
+                } catch (_) {}
+            }
+
+            if (!validObject(info)) {
+                info = doc.paragraphStyles.add({
+                    name: "Emetric Data"
+                });
+            }
+
+            try {
+                // Scale Courier New so its x-height equals the x-Height measure.
+                var courierEmSizeMM =
+                    r.lowercase / COURIER_NEW_X_HEIGHT_RATIO;
+
+                info.pointSize =
+                    exportPointValue(courierEmSizeMM, exportUnitIndex);
+                info.leading =
+                    exportPointValue(r.lineSpace, exportUnitIndex);
+                info.alignToBaseline = false;
+                info.justification = Justification.LEFT_ALIGN;
+
+                // Paragraph indent follows the Horizontal Grid offset.
+                info.leftIndent =
+                    scriptNumber(r.offsetGridHorizontal) + " mm";
+                info.firstLineIndent = "0 mm";
+
+                // One left-aligned tab stop at:
+                // 2 × Grid Module Width + Horizontal Grid offset.
+                var infoTabPosition =
+                    (2 * r.horizontalGridline) + r.offsetGridHorizontal;
+
+                replaceTabStops(info, [infoTabPosition]);
+
+                try {
+                    info.paragraphDirection =
+                        ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+                } catch (_) {}
+
+                try {
+                    info.digitsType = DigitsTypeOptions.ARABIC_DIGITS;
+                } catch (_) {}
+
+                try {
+                    info.appliedFont = "Courier New";
+                    info.fontStyle = "Regular";
+                } catch (_) {
+                    try {
+                        var courier =
+                            app.fonts.itemByName("Courier New\tRegular");
+
+                        if (courier && courier.isValid) {
+                            info.appliedFont = courier;
+                        }
+                    } catch (__) {}
+                }
+            } catch (_) {}
         }
 
-        try {
-            // Scale Courier New so its x-height equals the x-Height measure.
-            var courierEmSizeMM =
-                r.lowercase / COURIER_NEW_X_HEIGHT_RATIO;
+        // Placeholder Text intentionally uses the document's [Basic Paragraph]
+        // style. applyDocumentDefaultStyles() updates that style with the
+        // selected font, Metrics and Vertical Grid Interval.
+        var placeholder =
+            getNamedStyle(
+                doc.paragraphStyles,
+                [
+                    "$ID/NormalParagraphStyle",
+                    "[Basic Paragraph]",
+                    "Basic Paragraph",
+                    "[Grundstycke]",
+                    "Grundstycke"
+                ],
+                1
+            );
 
-            info.pointSize =
-                exportPointValue(courierEmSizeMM, exportUnitIndex);
-            info.leading =
-                exportPointValue(r.lineSpace, exportUnitIndex);
-            info.alignToBaseline = false;
-            info.justification = Justification.LEFT_ALIGN;
-
-            // Paragraph indent follows the Column Grid offset.
-            info.leftIndent =
-                scriptNumber(r.offsetGridHorizontal) + " mm";
-            info.firstLineIndent = "0 mm";
-
-            // One left-aligned tab stop at:
-            // 2 × Column Module Size + Column Grid offset.
-            var infoTabPosition =
-                (2 * r.horizontalGridline) + r.offsetGridHorizontal;
-
-            replaceTabStops(info, [infoTabPosition]);
-
-            try {
-                info.paragraphDirection =
-                    ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
-            } catch (_) {}
-
-            try {
-                info.digitsType = DigitsTypeOptions.ARABIC_DIGITS;
-            } catch (_) {}
-
-            try {
-                info.appliedFont = "Courier New";
-                info.fontStyle = "Regular";
-            } catch (_) {
-                try {
-                    var courier =
-                        app.fonts.itemByName("Courier New\tRegular");
-
-                    if (courier && courier.isValid) {
-                        info.appliedFont = courier;
-                    }
-                } catch (__) {}
-            }
-        } catch (_) {}
-
-        return { info: info };
+        return {
+            info: info,
+            placeholder: placeholder
+        };
     }
 
     function setupDocumentAndBaselineGrids(
@@ -2059,8 +2104,8 @@ sold or otherwise used without prior written permission from the copyright holde
         var gp = doc.gridPreferences;
 
         // DOCUMENT GRID
-        // InDesign's Horizontal Gridline Division follows Column Leading.
-        // The perpendicular grid division continues to follow Row Leading.
+        // InDesign's Horizontal Gridline Division follows Horizontal Grid Interval.
+        // The perpendicular grid division continues to follow Vertical Grid Interval.
         // This allows custom page sizes to use different horizontal and
         // vertical grid intervals while preserving the selected grid groups.
         try {
@@ -2084,7 +2129,7 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         // BASELINE GRID
-        // The first baseline follows the selected Row Offset Source.
+        // The first baseline follows the selected Vertical Alignment source.
         // Offset is half the selected source measure, so the baseline start
         // equals two times the calculated Row Offset.
         try {
@@ -2110,6 +2155,7 @@ sold or otherwise used without prior written permission from the copyright holde
         page,
         layer,
         r,
+        placeholderStyle,
         options
     ) {
         var savedZeroPoint = null;
@@ -2150,7 +2196,40 @@ sold or otherwise used without prior written permission from the copyright holde
                 } catch (__) {}
             }
 
-            // The first baseline follows the selected Row Offset Source.
+            try {
+                if (
+                    placeholderStyle &&
+                    placeholderStyle.isValid
+                ) {
+                    frame.parentStory.paragraphs.everyItem()
+                        .appliedParagraphStyle = placeholderStyle;
+                }
+            } catch (_) {}
+
+            try {
+                frame.parentStory.storyDirection =
+                    StoryDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+            } catch (_) {}
+
+            try {
+                var placeholderParagraphs =
+                    frame.parentStory.paragraphs.everyItem();
+
+                placeholderParagraphs.paragraphDirection =
+                    ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+
+                if (
+                    placeholderStyle &&
+                    placeholderStyle.isValid
+                ) {
+                    applyLanguageIfAvailable(
+                        placeholderParagraphs,
+                        placeholderStyle.appliedLanguage
+                    );
+                }
+            } catch (_) {}
+
+            // The first baseline follows the selected Vertical Alignment source.
             try {
                 var tfp = frame.textFramePreferences;
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
@@ -2211,14 +2290,14 @@ sold or otherwise used without prior written permission from the copyright holde
             "Emetric · v" + VERSION + "\r" +
             "\r" +
 
-            "Measurement and Source\r" +
+            "Measurement and Sources\r" +
             "Unit:\t" +
                 UNIT_OPTIONS[options.unitIndex].menuLabel + "\r" +
             "Metric Source:\t" + metricSourceLabel + "\r" +
-            "Format Mode:\t" +
+            "Emetric Mode:\t" +
                 (options.anamorphicFormat
-                    ? "Custom Page Size"
-                    : "Type-led Format") + "\r" +
+                    ? "Custom Format"
+                    : "Type Defined Format") + "\r" +
             fontSourceDetails +
             "\r" +
 
@@ -2229,90 +2308,90 @@ sold or otherwise used without prior written permission from the copyright holde
             "x-Height:\t" + selectedMeasure(r.lowercase) + "\r" +
             "Descender:\t" + selectedMeasure(r.descender) + "\r\r" +
 
-            "Leading\r" +
+            "Type Leading\r" +
             "Leading:\t" + selectedMeasure(r.lineSpace) + "\r" +
-            "Metrics : Leading:\t" +
-                formatNumber(v.metricsRatio) + ":" +
-                formatNumber(v.lineRatio) + "\r" +
+            "M & L Ratio:\t" +
+                formatNormalizedRatio(
+                    v.metricsRatio,
+                    v.lineRatio
+                ) + "\r" +
             "Document Grid:\t" +
                 selectedMeasure(r.horizontalLine) + " × " +
                 selectedMeasure(r.lineSpace) + "\r" +
             "Horizontal Gridline:\t" +
                 selectedMeasure(r.horizontalLine) +
-                " (Column Leading)\r" +
+                " (Horizontal Grid Interval)\r" +
             "Vertical Gridline:\t" +
                 selectedMeasure(r.lineSpace) +
-                " (Row Leading)\r" +
+                " (Vertical Grid Interval)\r" +
             "Document Grid Start:\t−" +
                 selectedMeasure(r.offsetGridVertical) + "\r" +
             "Baseline Start:\t" +
                 selectedMeasure(r.offsetGridVertical * 2) +
                 " from Top Margin\r\r" +
 
-            "Row Grid\r" +
-            "Leading:\t" + selectedMeasure(r.verticalLine) + "\r" +
-            "Group:\t" + formatNumber(v.verticalGroup) + "\r" +
-            "Module Size:\t" +
-                selectedMeasure(r.verticalGridline) + "\r" +
-            "Offset:\t" +
-                selectedMeasure(r.offsetGridVertical) + "\r" +
-            "Offset Source:\t" +
+            "Vertical Grid\r" +
+            "Grid Interval:\t" + selectedMeasure(r.verticalLine) + "\r" +
+            "Steps:\t" + formatNumber(v.verticalGroup) + "\r" +
+            "Alignment:\t" +
                 options.rowOffsetSourceName + "\r" +
-            "Row Margin:\t" +
-                selectedMeasure(r.gridMarginVertical) + "\r" +
-            "Row Gutter:\t" +
-                selectedMeasure(r.gridGutterVertical) + "\r\r" +
-
-            "Column Grid\r" +
-            "Leading:\t" + selectedMeasure(r.horizontalLine) + "\r" +
-            "Group:\t" + formatNumber(v.horizontalGroup) + "\r" +
-            "Module Size:\t" +
-                selectedMeasure(r.horizontalGridline) + "\r" +
+            "Grid Module Height:\t" +
+                selectedMeasure(r.verticalGridline) + "\r" +
+            "Grid Height:\t" + selectedMeasure(r.gridHeight) + "\r" +
             "Offset:\t" +
-                selectedMeasure(r.offsetGridHorizontal) + "\r" +
-            "Offset Source:\t" +
+                selectedMeasure(r.offsetGridVertical) + "\r\r" +
+
+            "Horizontal Grid\r" +
+            "Grid Interval:\t" + selectedMeasure(r.horizontalLine) + "\r" +
+            "Steps:\t" + formatNumber(v.horizontalGroup) + "\r" +
+            "Alignment:\t" +
                 options.columnOffsetSourceName + "\r" +
-            "Column Margin:\t" +
-                selectedMeasure(r.gridMarginHorizontal) + "\r" +
-            "Column Gutter:\t" +
-                selectedMeasure(r.gridGutterHorizontal) + "\r\r" +
+            "Grid Module Width:\t" +
+                selectedMeasure(r.horizontalGridline) + "\r" +
+            "Grid Width:\t" + selectedMeasure(r.gridWidth) + "\r" +
+            "Offset:\t" +
+                selectedMeasure(r.offsetGridHorizontal) + "\r\r" +
 
             "Grid Modules\r" +
             "Columns:\t" +
                 formatNumber(r.gridGroupHorizontal) + "\r" +
             "Rows:\t" +
                 formatNumber(r.gridGroupVertical) + "\r" +
-            "Module Ratio:\t" +
-                formatNumber(v.gridRatioHorizontal) + ":" +
-                formatNumber(v.gridRatioVertical) + "\r" +
-            "Grid Width:\t" + selectedMeasure(r.gridWidth) + "\r" +
-            "Grid Height:\t" + selectedMeasure(r.gridHeight) + "\r" +
-            "Module Area Width:\t" +
+            "Row Margin:\t" +
+                selectedMeasure(r.gridMarginVertical) + "\r" +
+            "Row Gutter:\t" +
+                selectedMeasure(r.gridGutterVertical) + "\r" +
+            "Column Margin:\t" +
+                selectedMeasure(r.gridMarginHorizontal) + "\r" +
+            "Column Gutter:\t" +
+                selectedMeasure(r.gridGutterHorizontal) + "\r\r" +
+
+            "Module Area\r" +
+            "Width:\t" +
                 selectedMeasure(r.intersectionWidth) + "\r" +
-            "Module Area Height:\t" +
+            "Height:\t" +
                 selectedMeasure(r.intersectionHeight) + "\r\r" +
 
             "Page\r" +
             "Width:\t" + selectedMeasure(r.pageWidth) + "\r" +
             "Height:\t" + selectedMeasure(r.pageHeight) + "\r" +
-            "Spread:\t" + selectedMeasure(r.spread) + "\r" +
-            "Format Ratio:\t" +
+            "Page Ratio:\t" +
                 formatNumber(r.formatRatioHorizontal) + ":" +
                 formatNumber(r.formatRatioVertical) + "\r" +
-            "Top Margin:\t" +
+            "Top:\t" +
                 formatNumber(v.marginTopFactor) + " = " +
                 selectedMeasure(r.marginTop) + "\r" +
-            "Bottom Margin:\t" +
+            "Bottom:\t" +
                 formatNumber(v.marginBottomFactor) + " = " +
                 selectedMeasure(r.marginBottom) + "\r" +
             (options.facingPages
-                ? "Inside Margin:\t"
-                : "Left Margin:\t") +
+                ? "Inside:\t"
+                : "Left:\t") +
                 formatNumber(v.marginLeftFactor) + " = " +
                 selectedMeasure(r.marginLeft) + "\r" +
             (options.facingPages
-                ? "Outside Margin:\t"
-                : "Right Margin:\t") +
+                ? "Outside:\t"
+                : "Right:\t") +
                 formatNumber(v.marginRightFactor) + " = " +
                 selectedMeasure(r.marginRight) + "\r" +
             "Type Area Width:\t" +
@@ -2346,13 +2425,21 @@ sold or otherwise used without prior written permission from the copyright holde
                 if (savedZeroPoint) doc.zeroPoint = savedZeroPoint;
             } catch (_) {}
 
-            frame.parentStory.paragraphs.everyItem().appliedParagraphStyle = style;
+            try {
+                if (
+                    style &&
+                    style.isValid
+                ) {
+                    frame.parentStory.paragraphs.everyItem()
+                        .appliedParagraphStyle = style;
+                }
+            } catch (_) {}
 
             try {
                 var tfp = frame.textFramePreferences;
 
                 // Text Frame Options > Baseline Options:
-                // First baseline follows the selected Row Offset Source.
+                // First baseline follows the selected Vertical Alignment source.
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
                     r.offsetGridVertical * 2;
@@ -2392,7 +2479,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 } catch (_) {}
             } catch (_) {}
 
-            frame.label = "VTI Information";
+            frame.label = "Emetric Data";
             return frame;
         } catch (_) {
             return null;
@@ -2548,15 +2635,25 @@ sold or otherwise used without prior written permission from the copyright holde
     }
 
     function setThemePasteboard(doc) {
-        // InDesign > Preferences > Guides and Pasteboard:
-        // Preview Background defaults to Match to Theme Color.
+        // InDesign's normal pasteboard color is an application preference.
+        // 0 = Default White, 1 = Match with Theme Color.
+        // Keep Emetric's preview background on the earlier white/default setting.
         try {
-            app.generalPreferences.pasteboardColorPreference = 1;
+            app.generalPreferences.pasteboardColorPreference = 0;
         } catch (_) {}
 
         try {
-            doc.pasteboardPreferences.matchPreviewBackgroundToThemeColor = true;
+            doc.pasteboardPreferences.matchPreviewBackgroundToThemeColor = false;
         } catch (_) {}
+
+        try {
+            doc.pasteboardPreferences.previewBackgroundColor = UIColors.WHITE;
+        } catch (_) {
+            try {
+                doc.pasteboardPreferences.previewBackgroundColor =
+                    [255, 255, 255];
+            } catch (__) {}
+        }
     }
 
     function getNamedStyle(collection, names, fallbackIndex) {
@@ -2599,10 +2696,66 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
+    function validLanguage(language) {
+        if (!language) {
+            return false;
+        }
+
+        try {
+            if (language.isValid !== undefined) {
+                return Boolean(language.isValid);
+            }
+        } catch (_) {}
+
+        return true;
+    }
+
+    function getDefaultInDesignLanguage(doc) {
+        var language = null;
+
+        try {
+            language = doc.textDefaults.appliedLanguage;
+            if (validLanguage(language)) {
+                return language;
+            }
+        } catch (_) {}
+
+        try {
+            language = app.textDefaults.appliedLanguage;
+            if (validLanguage(language)) {
+                return language;
+            }
+        } catch (_) {}
+
+        return null;
+    }
+
+    function applyLeftToRightParagraphDirection(target) {
+        if (!target) {
+            return;
+        }
+
+        try {
+            target.paragraphDirection =
+                ParagraphDirectionOptions.LEFT_TO_RIGHT_DIRECTION;
+        } catch (_) {}
+    }
+
+    function applyLanguageIfAvailable(target, language) {
+        if (!target || !validLanguage(language)) {
+            return;
+        }
+
+        try {
+            target.appliedLanguage = language;
+        } catch (_) {}
+    }
+
     function applyDocumentDefaultStyles(doc, r, options) {
         var fontRecord = options.selectedFontRecord || null;
         var pointSize = exportPointValue(r.metrics, options.unitIndex);
         var leading = exportPointValue(r.lineSpace, options.unitIndex);
+        var defaultLanguage = getDefaultInDesignLanguage(doc);
 
         // Document text defaults control the actual font and size used
         // when new text is created without an explicit style.
@@ -2649,6 +2802,19 @@ sold or otherwise used without prior written permission from the copyright holde
                 try {
                     paragraphStyle.leading = leading;
                 } catch (_) {}
+
+                try {
+                    paragraphStyle.justification = Justification.LEFT_ALIGN;
+                } catch (_) {}
+
+                // Placeholder Text uses [Basic Paragraph]. Keep it explicitly
+                // left-aligned and left-to-right while preserving the user's
+                // default InDesign language.
+                applyLeftToRightParagraphDirection(paragraphStyle);
+                applyLanguageIfAvailable(
+                    paragraphStyle,
+                    defaultLanguage
+                );
             }
         } catch (_) {}
 
@@ -2713,10 +2879,41 @@ sold or otherwise used without prior written permission from the copyright holde
             doc.documentPreferences.pagesPerDocument = 1;
         } catch (_) {}
 
-        var majorLayer = ensureLayer(doc, "Emetric – Grid Lines", UIColors.LIGHT_BLUE);
+        var majorLayer =
+            (
+                options.createMajorGridVertical ||
+                options.createMajorGridHorizontal
+            )
+                ? ensureLayer(
+                    doc,
+                    "Emetric – Grid Lines",
+                    UIColors.LIGHT_BLUE
+                  )
+                : null;
+
         var intersectionLayer =
-            ensureLayer(doc, "Emetric – Module Areas", UIColors.LIGHT_BLUE);
-        var contentLayer = ensureLayer(doc, "Emetric – Content", UIColors.BLACK);
+            (
+                options.createColumns ||
+                options.createRows
+            )
+                ? ensureLayer(
+                    doc,
+                    "Emetric – Module Areas",
+                    UIColors.LIGHT_BLUE
+                  )
+                : null;
+
+        var contentLayer =
+            (
+                options.addPlaceholderText ||
+                options.addInformationPage
+            )
+                ? ensureLayer(
+                    doc,
+                    "Emetric – Content",
+                    UIColors.BLACK
+                  )
+                : null;
 
         setupDocumentAndBaselineGrids(
             doc,
@@ -2725,7 +2922,7 @@ sold or otherwise used without prior written permission from the copyright holde
             options.baselineGridColor,
             options.gridsInBack
         );
-        var styles = createParagraphStyles(doc, r, options.unitIndex);
+        var styles = createParagraphStyles(doc, r, options.unitIndex, options);
         applyDocumentDefaultStyles(doc, r, options);
 
         // Build the final page order before applying page-bound settings.
@@ -2833,6 +3030,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 placeholderPage,
                 contentLayer,
                 r,
+                styles.placeholder,
                 options
             );
         }
@@ -2853,9 +3051,21 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         try {
-            majorLayer.locked = true;
-            intersectionLayer.locked = true;
-            contentLayer.move(LocationOptions.AT_BEGINNING);
+            if (majorLayer && majorLayer.isValid) {
+                majorLayer.locked = true;
+            }
+        } catch (_) {}
+
+        try {
+            if (intersectionLayer && intersectionLayer.isValid) {
+                intersectionLayer.locked = true;
+            }
+        } catch (_) {}
+
+        try {
+            if (contentLayer && contentLayer.isValid) {
+                contentLayer.move(LocationOptions.AT_BEGINNING);
+            }
         } catch (_) {}
 
         // Apply the user's selected ruler/display unit last. This changes only
@@ -3880,7 +4090,29 @@ sold or otherwise used without prior written permission from the copyright holde
     col1.minimumSize.width = UI_COLUMN_WIDTH;
     col1.maximumSize.width = UI_COLUMN_WIDTH;
 
-    var pType = addSection(col1, "Measurement and Source");
+    var pFormatMode = addSection(col1, "Emetric Mode");
+
+    var typeLedFormat =
+        pFormatMode.add(
+            "radiobutton",
+            undefined,
+            "Type Defined Format"
+        );
+    typeLedFormat.value = true;
+    typeLedFormat.helpTip =
+        "Metrics and Leading define the page format.";
+
+    var anamorphicFormat =
+        pFormatMode.add(
+            "radiobutton",
+            undefined,
+            "Custom Format"
+        );
+    anamorphicFormat.value = false;
+    anamorphicFormat.helpTip =
+        "Page Width and Height define the Horizontal and Vertical Grid Interval values.";
+
+    var pType = addSection(col1, "Measurement and Sources");
 
     var unitRow = pType.add("group");
     prepareFieldRow(unitRow);
@@ -4089,12 +4321,12 @@ sold or otherwise used without prior written permission from the copyright holde
         "The em-based reference size used for all typographic proportions.";
     try { fMetrics.label.helpTip = fMetrics.helpTip; } catch (_) {}
 
-    var pLineSpace = addSection(col1, "Leading");
+    var pLineSpace = addSection(col1, "Type Leading");
     var oLineSpace = addRow(pLineSpace, "Leading", "", true, "mm");
     oLineSpace.emetricThreeDecimalDisplay = true;
 
     var fMetricsLine =
-        addRatioRow(pLineSpace, "Metrics : Leading", "4", "5", true);
+        addRatioRow(pLineSpace, "M & L Ratio", "1", "1,25", true);
 
     var colorPanel = addSection(col1, "Colors");
 
@@ -4231,82 +4463,82 @@ sold or otherwise used without prior written permission from the copyright holde
         "x-Height"
     ];
 
-    var pVertical = addSection(col2, "Row Grid");
-    var oVerticalLine = addRow(pVertical, "Leading", "", false, "mm");
-    var fVerticalGroup = addRow(pVertical, "Group", "6", true, "");
-    var oVerticalGridline =
-        addRow(pVertical, "Module Size", "", false, "mm");
-    var oVerticalOffset = addRow(pVertical, "Offset", "", false, "mm");
+    var pVertical = addSection(col2, "Vertical Grid");
+    var oVerticalLine = addRow(pVertical, "Grid Interval", "", true, "mm");
+    var fVerticalGroup = addRow(pVertical, "Steps", "6", true, "");
     var rowOffsetSource =
         addSelectorRow(
             pVertical,
-            "Offset Source",
+            "Alignment",
             OFFSET_SOURCE_NAMES,
             3
         );
-    var oGridMarginV =
-        addRow(pVertical, "Row Margin", "", false, "mm");
-    var oGutterV =
-        addRow(pVertical, "Row Gutter", "", false, "mm");
+    var oVerticalGridline =
+        addRow(pVertical, "Grid Module Height", "", true, "mm");
+    var oGridHeight = addRow(pVertical, "Grid Height", "", false, "mm");
+    var oVerticalOffset = addRow(pVertical, "Offset", "", false, "mm");
 
     var majorGridHorizontalCheckbox =
-        pVertical.add("checkbox", undefined, "Row Grid Lines");
+        pVertical.add("checkbox", undefined, "Grid Guides");
     majorGridHorizontalCheckbox.value = false;
 
-    var guideRowsCheckbox =
-        pVertical.add("checkbox", undefined, "Row Gutter Guides");
-    guideRowsCheckbox.value = true;
-
-    var pHorizontal = addSection(col2, "Column Grid");
-    var oHorizontalLine = addRow(pHorizontal, "Leading", "", false, "mm");
-    var fHorizontalGroup = addRow(pHorizontal, "Group", "6", true, "");
-    var oHorizontalGridline =
-        addRow(pHorizontal, "Module Size", "", false, "mm");
-    var oHorizontalOffset = addRow(pHorizontal, "Offset", "", false, "mm");
+    var pHorizontal = addSection(col2, "Horizontal Grid");
+    var oHorizontalLine = addRow(pHorizontal, "Grid Interval", "", true, "mm");
+    var fHorizontalGroup = addRow(pHorizontal, "Steps", "6", true, "");
     var columnOffsetSource =
         addSelectorRow(
             pHorizontal,
-            "Offset Source",
+            "Alignment",
             OFFSET_SOURCE_NAMES,
             3
         );
-    var oGridMarginH =
-        addRow(pHorizontal, "Column Margin", "", false, "mm");
-    var oGutterH =
-        addRow(pHorizontal, "Column Gutter", "", false, "mm");
+    var oHorizontalGridline =
+        addRow(pHorizontal, "Grid Module Width", "", true, "mm");
+    var oGridWidth = addRow(pHorizontal, "Grid Width", "", false, "mm");
+    var oHorizontalOffset = addRow(pHorizontal, "Offset", "", false, "mm");
 
     var majorGridVerticalCheckbox =
-        pHorizontal.add("checkbox", undefined, "Column Grid Lines");
+        pHorizontal.add("checkbox", undefined, "Grid Guides");
     majorGridVerticalCheckbox.value = false;
-
-    var guideColumnsCheckbox =
-        pHorizontal.add("checkbox", undefined, "Column Gutter Guides");
-    guideColumnsCheckbox.value = true;
 
     var pGridGroup = addSection(col2, "Grid Modules");
     var fGridGroupH = addRow(pGridGroup, "Columns", "6", true, "");
     var fGridGroupV = addRow(pGridGroup, "Rows", "9", true, "");
-    var fGridRatio =
-        addRatioRow(pGridGroup, "Module Ratio", "2", "3", true);
+
+    var oGridMarginV =
+        addRow(pGridGroup, "Row Margin", "", false, "mm");
+    var oGutterV =
+        addRow(pGridGroup, "Row Gutter", "", false, "mm");
+    var oGridMarginH =
+        addRow(pGridGroup, "Column Margin", "", false, "mm");
+    var oGutterH =
+        addRow(pGridGroup, "Column Gutter", "", false, "mm");
+
+    var guideRowsCheckbox =
+        pGridGroup.add("checkbox", undefined, "Row Gutter Guides");
+    guideRowsCheckbox.value = true;
+
+    var guideColumnsCheckbox =
+        pGridGroup.add("checkbox", undefined, "Column Gutter Guides");
+    guideColumnsCheckbox.value = true;
 
     var columnGuidesCheckbox =
-        pGridGroup.add("checkbox", undefined, "Use Column Gutters in InDesign");
+        pGridGroup.add("checkbox", undefined, "Use Column Gutter in InDesign");
     columnGuidesCheckbox.value = true;
     columnGuidesCheckbox.helpTip =
         "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.";
 
-    var oGridWidth = addRow(pGridGroup, "Grid Width", "", false, "mm");
-    var oGridHeight = addRow(pGridGroup, "Grid Height", "", false, "mm");
-    var oIntersectionW =
-        addRow(pGridGroup, "Module Area Width", "", false, "mm");
-    var oIntersectionH =
-        addRow(pGridGroup, "Module Area Height", "", false, "mm");
-
+    oVerticalLine.helpTip =
+        "The vertical grid interval used for row-based spacing.";
+    try { oVerticalLine.label.helpTip = oVerticalLine.helpTip; } catch (_) {}
+    oHorizontalLine.helpTip =
+        "The horizontal grid interval used for column-based spacing.";
+    try { oHorizontalLine.label.helpTip = oHorizontalLine.helpTip; } catch (_) {}
     oVerticalGridline.helpTip =
-        "Leading multiplied by Group; the height of one row module.";
+        "Grid Interval multiplied by Steps; the height of one vertical grid module.";
     try { oVerticalGridline.label.helpTip = oVerticalGridline.helpTip; } catch (_) {}
     oHorizontalGridline.helpTip =
-        "Leading multiplied by Group; the width of one column module.";
+        "Grid Interval multiplied by Steps; the width of one horizontal grid module.";
     try { oHorizontalGridline.label.helpTip = oHorizontalGridline.helpTip; } catch (_) {}
     // COLUMN 3 — PAGE + DOCUMENT OPTIONS
     var col3 = columns.add("group");
@@ -4317,69 +4549,54 @@ sold or otherwise used without prior written permission from the copyright holde
     col3.minimumSize.width = UI_COLUMN_WIDTH;
     col3.maximumSize.width = UI_COLUMN_WIDTH;
 
-    var pFormatMode = addSection(col3, "Format Mode");
-
-    var typeLedFormat =
-        pFormatMode.add(
-            "radiobutton",
-            undefined,
-            "Type-led Format"
-        );
-    typeLedFormat.value = true;
-    typeLedFormat.helpTip =
-        "Metrics and Leading define the page format.";
-
-    var anamorphicFormat =
-        pFormatMode.add(
-            "radiobutton",
-            undefined,
-            "Custom Page Size"
-        );
-    anamorphicFormat.value = false;
-    anamorphicFormat.helpTip =
-        "Page Width and Height define Column and Row Leading.";
-
-    var pPage = addSection(col3, "Page");
-
-    addSubheading(pPage, "Page Size");
+    var pPage = addSection(col3, "Page Size");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
-
-    oPageWidth.helpTip =
-        "Custom Page Size: Width derives Column Leading from the current horizontal page grid steps.";
-    oPageHeight.helpTip =
-        "Custom Page Size: Height derives Row Leading and type size from the current vertical page grid steps.";
-    try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
-    try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
+    var oFormatRatio =
+        addRatioRow(pPage, "Page Ratio", "", "", true);
 
     var lockFormatRatio =
         pPage.add("checkbox", undefined, "Lock Page Ratio");
     lockFormatRatio.value = false;
     lockFormatRatio.enabled = false;
     lockFormatRatio.helpTip =
-        "Keeps the current page width/height ratio when Custom Page Size is active.";
+        "Keeps the current page width/height ratio when Custom Format is active.";
 
-    addSubheading(pPage, "Margins");
-    var fMarginTop = addMarginRow(pPage, "Top Margin", "1");
-    var fMarginBottom = addMarginRow(pPage, "Bottom Margin", "1");
-    var fMarginLeft = addMarginRow(pPage, "Left Margin", "1");
-    var fMarginRight = addMarginRow(pPage, "Right Margin", "1");
+    oPageWidth.helpTip =
+        "Custom Format: Width derives Horizontal Grid Interval from the current horizontal page grid steps.";
+    oPageHeight.helpTip =
+        "Custom Format: Height derives Vertical Grid Interval and type size from the current vertical page grid steps.";
+    try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
+    try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
+    try {
+        oFormatRatio.a.helpTip =
+            "Custom Format: edit the first value of the page width/height ratio.";
+        oFormatRatio.b.helpTip =
+            "Custom Format: edit the second value of the page width/height ratio.";
+    } catch (_) {}
 
-    addSubheading(pPage, "Calculated");
-    var oSpread = addRow(pPage, "Spread", "", false, "mm");
-    var oFormatRatio =
-        addRatioRow(pPage, "Format Ratio", "", "", false);
+    var pMargins = addSection(col3, "Margins");
+    var fMarginTop = addMarginRow(pMargins, "Top", "1");
+    var fMarginBottom = addMarginRow(pMargins, "Bottom", "1");
+    var fMarginLeft = addMarginRow(pMargins, "Left", "1");
+    var fMarginRight = addMarginRow(pMargins, "Right", "1");
 
+    var pModuleArea = addSection(col3, "Module Area");
+    var oIntersectionW =
+        addRow(pModuleArea, "Width", "", false, "mm");
+    var oIntersectionH =
+        addRow(pModuleArea, "Height", "", false, "mm");
+
+    var pTypeArea = addSection(col3, "Type Area");
     var oTypeWidth =
-        addRow(pPage, "Type Area Width", "", false, "mm");
+        addRow(pTypeArea, "Width", "", false, "mm");
     var oTypeHeight =
-        addRow(pPage, "Type Area Height", "", false, "mm");
-
-    addSubheading(pPage, "Page Setup");
-    var facingPages = pPage.add("checkbox", undefined, "Facing Pages");
-    facingPages.value = false;
+        addRow(pTypeArea, "Height", "", false, "mm");
 
     var pLayout = addSection(col3, "Document Options");
+    var facingPages = pLayout.add("checkbox", undefined, "Facing Pages");
+    facingPages.value = false;
+
     var useAMaster =
         pLayout.add("checkbox", undefined, "Use A-Parent");
     useAMaster.value = true;
@@ -4437,18 +4654,18 @@ sold or otherwise used without prior written permission from the copyright holde
 
         updateDynamicFieldLabel(
             fMarginLeft.label,
-            useFacingLabels ? "Inside Margin" : "Left Margin"
+            useFacingLabels ? "Inside" : "Left"
         );
         updateDynamicFieldLabel(
             fMarginRight.label,
-            useFacingLabels ? "Outside Margin" : "Right Margin"
+            useFacingLabels ? "Outside" : "Right"
         );
 
         // Do not re-layout the complete Margin panel. That could shift the
         // unchanged Top and Bottom rows when the longer labels are shown.
         try {
-            if (pPage.window && pPage.window.update) {
-                pPage.window.update();
+            if (pMargins.window && pMargins.window.update) {
+                pMargins.window.update();
             }
         } catch (_) {}
     }
@@ -4606,7 +4823,7 @@ sold or otherwise used without prior written permission from the copyright holde
         compactPreviewGroup.add(
             "checkbox",
             undefined,
-            "Live Preview"
+            "Preview"
         );
     compactPreviewCheckbox.value = true;
     compactPreviewCheckbox.alignment =
@@ -4676,7 +4893,7 @@ sold or otherwise used without prior written permission from the copyright holde
     previewGroup.spacing = 0;
 
     var previewCheckbox =
-        previewGroup.add("checkbox", undefined, "Live Preview");
+        previewGroup.add("checkbox", undefined, "Preview");
     previewCheckbox.value = true;
     previewCheckbox.alignment = ["left", "center"];
 
@@ -4761,6 +4978,8 @@ sold or otherwise used without prior written permission from the copyright holde
             2147483647;
 
         removeFocusRestoreIdleTask();
+
+
         setPrimaryCreateEnabled(false);
     }
 
@@ -5877,22 +6096,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 rows:
                     String(
                         fGridGroupV.text
-                    ),
-                ratioHorizontal:
-                    String(
-                        fGridRatio.a.text
-                    ),
-                ratioVertical:
-                    String(
-                        fGridRatio.b.text
-                    ),
-                exactRows:
-                    exactGridRows === null ||
-                    exactGridRows === undefined
-                        ? null
-                        : Number(
-                            exactGridRows
-                        )
+                    )
             },
 
             margins: {
@@ -6318,14 +6522,14 @@ sold or otherwise used without prior written permission from the copyright holde
                     typeSize.ratioMetrics !==
                         undefined
                         ? typeSize.ratioMetrics
-                        : "4"
+                        : "1"
                 );
             fMetricsLine.b.text =
                 String(
                     typeSize.ratioLeading !==
                         undefined
                         ? typeSize.ratioLeading
-                        : "5"
+                        : "1,25"
                 );
 
             exactLineSpaceMM =
@@ -6420,35 +6624,7 @@ sold or otherwise used without prior written permission from the copyright holde
                         ? gridModules.rows
                         : "9"
                 );
-            fGridRatio.a.text =
-                String(
-                    gridModules
-                        .ratioHorizontal !==
-                        undefined
-                        ? gridModules
-                            .ratioHorizontal
-                        : "2"
-                );
-            fGridRatio.b.text =
-                String(
-                    gridModules
-                        .ratioVertical !==
-                        undefined
-                        ? gridModules
-                            .ratioVertical
-                        : "3"
-                );
-
-            exactGridRows =
-                gridModules.exactRows ===
-                    null ||
-                gridModules.exactRows ===
-                    undefined
-                    ? null
-                    : Number(
-                        gridModules
-                            .exactRows
-                    );
+            exactGridRows = null;
 
             exactPageWidthMM =
                 pageDimensions.exactWidthMM ===
@@ -7452,7 +7628,7 @@ sold or otherwise used without prior written permission from the copyright holde
             fMarginTop.result, fMarginBottom.result,
             fMarginLeft.result, fMarginRight.result,
             oTypeWidth, oTypeHeight, oIntersectionW, oIntersectionH,
-            oPageWidth, oPageHeight, oSpread
+            oPageWidth, oPageHeight
         ];
 
         for (var i = 0; i < fields.length; i++) {
@@ -8550,12 +8726,132 @@ sold or otherwise used without prior written permission from the copyright holde
     }
 
     var customRatiosExpanded = false;
+    var colorHexRefreshIdleTask = null;
+    var COLOR_HEX_REFRESH_IDLE_NAME =
+        "Emetric Refresh Color HEX Fields";
+
+    function removeColorHexRefreshIdleTask() {
+        if (!colorHexRefreshIdleTask) return;
+
+        try {
+            colorHexRefreshIdleTask.removeEventListener(
+                IdleEvent.ON_IDLE,
+                handleColorHexRefreshIdle
+            );
+        } catch (_) {
+            try {
+                colorHexRefreshIdleTask.removeEventListener(
+                    "onIdle",
+                    handleColorHexRefreshIdle
+                );
+            } catch (__) {}
+        }
+
+        try {
+            if (colorHexRefreshIdleTask.isValid) {
+                colorHexRefreshIdleTask.remove();
+            }
+        } catch (_) {}
+
+        colorHexRefreshIdleTask = null;
+    }
+
+    function handleColorHexRefreshIdle(event) {
+        removeColorHexRefreshIdleTask();
+        refreshColorHexFieldsAfterLayout();
+    }
+
+    function scheduleDeferredColorHexRefresh() {
+        removeColorHexRefreshIdleTask();
+
+        try {
+            colorHexRefreshIdleTask = app.idleTasks.add({
+                name: COLOR_HEX_REFRESH_IDLE_NAME,
+                sleep: 150
+            });
+
+            try {
+                colorHexRefreshIdleTask.addEventListener(
+                    IdleEvent.ON_IDLE,
+                    handleColorHexRefreshIdle
+                );
+            } catch (_) {
+                colorHexRefreshIdleTask.addEventListener(
+                    "onIdle",
+                    handleColorHexRefreshIdle
+                );
+            }
+        } catch (_) {
+            colorHexRefreshIdleTask = null;
+            refreshColorHexFieldsAfterLayout();
+        }
+    }
+
+    function refreshColorHexFieldsAfterLayout() {
+        // ScriptUI can drop edittext painting in the lower color rows after
+        // the Custom Metric controls expand/collapse. Rewriting and briefly
+        // toggling the fields keeps Baseline Grid and Document Grid HEX values
+        // visible.
+        var selectors = [
+            guideColorSelector,
+            marginColorSelector,
+            columnColorSelector,
+            baselineGridColorSelector,
+            documentGridColorSelector
+        ];
+
+        for (var i = 0; i < selectors.length; i++) {
+            try {
+                var selector = selectors[i];
+                var hex = selector.getHex();
+
+                selector.hex = hex;
+                selector.hexField.text = "";
+                selector.hexField.text = hex;
+
+                try {
+                    selector.hexField.visible = false;
+                    selector.hexField.visible = true;
+                } catch (__) {}
+
+                try {
+                    selector.hexField.preferredSize.width = UI_FIELD_WIDTH;
+                    selector.hexField.minimumSize.width = UI_FIELD_WIDTH;
+                    selector.hexField.maximumSize.width = UI_FIELD_WIDTH;
+                } catch (__) {}
+
+                try { selector.preview.notify("onDraw"); } catch (__) {}
+                try { selector.group.layout.layout(true); } catch (__) {}
+            } catch (_) {}
+        }
+
+        try {
+            colorPanel.layout.layout(true);
+        } catch (_) {}
+
+        for (var j = 0; j < selectors.length; j++) {
+            try {
+                var refreshedSelector = selectors[j];
+                var refreshedHex = refreshedSelector.getHex();
+                refreshedSelector.hexField.text = refreshedHex;
+                try { refreshedSelector.hexField.notify("onDraw"); } catch (__) {}
+            } catch (_) {}
+        }
+
+        try {
+            if (colorPanel.window && colorPanel.window.update) {
+                colorPanel.window.update();
+            }
+        } catch (_) {}
+    }
 
     function layoutMainWindow() {
         try {
             // Release cached heights before one consolidated layout pass.
             pType.minimumSize.height = 0;
             pType.preferredSize.height = -1;
+            colorPanel.minimumSize.height = 0;
+            colorPanel.preferredSize.height = -1;
             col1.minimumSize.height = 0;
             col1.preferredSize.height = -1;
             columns.minimumSize.height = 0;
@@ -8568,6 +8864,8 @@ sold or otherwise used without prior written permission from the copyright holde
             w.layout.layout(true);
             w.layout.resize();
         } catch (_) {}
+
+        refreshColorHexFieldsAfterLayout();
     }
 
     function setCustomRatiosExpanded(expanded) {
@@ -8588,6 +8886,7 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
 
         layoutMainWindow();
+        scheduleDeferredColorHexRefresh();
     }
 
     function setCustomRatioControlsEnabled(enabled) {
@@ -8779,16 +9078,15 @@ sold or otherwise used without prior written permission from the copyright holde
     }
 
     function updatePlaceholderTextAvailability() {
-        var selectedFontActive =
+        var selectedFontAvailable =
             Boolean(
-                selectedMetricSourceKey() === "selectedFont" &&
                 selectedFontRecord()
             );
 
         try {
-            placeholderText.enabled = selectedFontActive;
+            placeholderText.enabled = selectedFontAvailable;
 
-            if (!selectedFontActive) {
+            if (!selectedFontAvailable) {
                 placeholderText.value = false;
             }
         } catch (_) {}
@@ -8927,6 +9225,11 @@ sold or otherwise used without prior written permission from the copyright holde
             sourceKey;
 
         updatePlaceholderTextAvailability();
+
+        // Metric source changes can expand/collapse Custom Metric fields.
+        // Repaint the Colors panel afterwards so the lower HEX fields remain visible.
+        refreshColorHexFieldsAfterLayout();
+        scheduleDeferredColorHexRefresh();
     };
 
     fontFamilyDropdown.onChange = function () {
@@ -8961,9 +9264,12 @@ sold or otherwise used without prior written permission from the copyright holde
         customRatioDescender,
         fMetrics, oAscender, oUppercase, oLowercase, oDescender,
         oLineSpace, fMetricsLine.a, fMetricsLine.b,
+        oVerticalLine, oVerticalGridline,
+        oHorizontalLine, oHorizontalGridline,
         fVerticalGroup, fHorizontalGroup,
-        fGridGroupH, fGridGroupV, fGridRatio.a, fGridRatio.b,
+        fGridGroupH, fGridGroupV,
         oPageWidth, oPageHeight,
+        oFormatRatio.a, oFormatRatio.b,
         fMarginTop.factor, fMarginBottom.factor,
         fMarginLeft.factor, fMarginRight.factor
     ];
@@ -9179,11 +9485,11 @@ sold or otherwise used without prior written permission from the copyright holde
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
             typeRatios: activeTypeRatios,
             lineSpaceOverride: exactLineSpaceMM,
-            metricsRatio: parseNumber(fMetricsLine.a.text, 4),
-            lineRatio: parseNumber(fMetricsLine.b.text, 5),
+            metricsRatio: parseNumber(fMetricsLine.a.text, 1),
+            lineRatio: parseNumber(fMetricsLine.b.text, 1.25),
 
             verticalGroup: parseNumber(fVerticalGroup.text, 6),
-            horizontalGroup: parseNumber(fHorizontalGroup.text, 9),
+            horizontalGroup: parseNumber(fHorizontalGroup.text, 6),
 
             rowOffsetSourceIndex:
                 rowOffsetSource.selection
@@ -9196,9 +9502,6 @@ sold or otherwise used without prior written permission from the copyright holde
 
             gridGroupHorizontal: parseNumber(fGridGroupH.text, 6),
             gridGroupVertical: parseNumber(fGridGroupV.text, 9),
-            gridRowsOverride: exactGridRows,
-            gridRatioHorizontal: parseNumber(fGridRatio.a.text, 2),
-            gridRatioVertical: parseNumber(fGridRatio.b.text, 3),
 
             marginTopFactor: parseNumber(fMarginTop.factor.text, 2),
             marginBottomFactor: parseNumber(fMarginBottom.factor.text, 4),
@@ -9273,7 +9576,6 @@ sold or otherwise used without prior written permission from the copyright holde
 
             setMeasureField(oPageWidth, currentResult.pageWidth);
             setMeasureField(oPageHeight, currentResult.pageHeight);
-            setMeasureField(oSpread, currentResult.spread);
             setField(oFormatRatio.a, currentResult.formatRatioHorizontal);
             setField(oFormatRatio.b, currentResult.formatRatioVertical);
 
@@ -9304,16 +9606,14 @@ sold or otherwise used without prior written permission from the copyright holde
         customRatioXHeight.text = "5";
         customRatioDescender.text = "-3";
         fMetrics.text = formatMeasureValue(4, 0);
-        fMetricsLine.a.text = "4";
-        fMetricsLine.b.text = "5";
+        fMetricsLine.a.text = "1";
+        fMetricsLine.b.text = "1,25";
         fVerticalGroup.text = "6";
         fHorizontalGroup.text = "6";
         rowOffsetSource.selection = 3;
         columnOffsetSource.selection = 3;
         fGridGroupH.text = "6";
         fGridGroupV.text = "9";
-        fGridRatio.a.text = "2";
-        fGridRatio.b.text = "3";
         fMarginTop.factor.text = "1";
         fMarginBottom.factor.text = "1";
         fMarginLeft.factor.text = "1";
@@ -9392,7 +9692,7 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
-    // ---------- Custom page size controls ----------
+    // ---------- Custom format controls ----------
 
     function updateAnamorphicFormatControls() {
         var enabled = activeAnamorphicMode();
@@ -9401,7 +9701,13 @@ sold or otherwise used without prior written permission from the copyright holde
         try { anamorphicFormat.value = enabled; } catch (_) {}
         try { oPageWidth.enabled = enabled; } catch (_) {}
         try { oPageHeight.enabled = enabled; } catch (_) {}
+        try { oFormatRatio.a.enabled = enabled; } catch (_) {}
+        try { oFormatRatio.b.enabled = enabled; } catch (_) {}
         try { lockFormatRatio.enabled = enabled; } catch (_) {}
+        try { oVerticalLine.enabled = enabled; } catch (_) {}
+        try { oVerticalGridline.enabled = enabled; } catch (_) {}
+        try { oHorizontalLine.enabled = enabled; } catch (_) {}
+        try { oHorizontalGridline.enabled = enabled; } catch (_) {}
 
         if (!enabled) {
             try { lockFormatRatio.value = false; } catch (_) {}
@@ -9410,24 +9716,40 @@ sold or otherwise used without prior written permission from the copyright holde
         try {
             updateDynamicFieldLabel(
                 oVerticalLine.label,
-                enabled ? "Row Leading" : "Leading"
+                "Grid Interval"
             );
             updateDynamicFieldLabel(
                 oHorizontalLine.label,
-                enabled ? "Column Leading" : "Leading"
+                "Grid Interval"
             );
         } catch (_) {}
 
         try {
             oPageWidth.helpTip = enabled
-                ? "Editing Width changes Column Leading while preserving the current horizontal page grid steps."
-                : "Choose Custom Page Size in Format Mode to edit Width.";
+                ? "Editing Width changes the Horizontal Grid value “Grid Interval” while preserving the current horizontal page grid steps."
+                : "Choose Custom Format in Emetric Mode to edit Width.";
             oPageHeight.helpTip = enabled
-                ? "Editing Height changes Row Leading while preserving the current vertical page grid steps."
-                : "Choose Custom Page Size in Format Mode to edit Height.";
+                ? "Editing Height changes the Vertical Grid value “Grid Interval” while preserving the current vertical page grid steps."
+                : "Choose Custom Format in Emetric Mode to edit Height.";
+            oFormatRatio.a.helpTip = enabled
+                ? "Editing Page Ratio keeps Width and derives Height from the entered ratio."
+                : "Choose Custom Format in Emetric Mode to edit Page Ratio.";
+            oFormatRatio.b.helpTip = oFormatRatio.a.helpTip;
             lockFormatRatio.helpTip = enabled
                 ? "Keeps the current page width/height ratio when either dimension is edited."
-                : "Choose Custom Page Size to lock the page ratio.";
+                : "Choose Custom Format to lock the page ratio.";
+            oVerticalLine.helpTip = enabled
+                ? "Editing Vertical Grid Interval changes page height and type size while preserving Vertical Steps."
+                : "Choose Custom Format in Emetric Mode to edit Vertical Grid Interval.";
+            oVerticalGridline.helpTip = enabled
+                ? "Editing Grid Module Height changes Vertical Grid Interval through the current Vertical Steps."
+                : "Choose Custom Format in Emetric Mode to edit Grid Module Height.";
+            oHorizontalLine.helpTip = enabled
+                ? "Editing Horizontal Grid Interval changes page width while preserving Horizontal Steps."
+                : "Choose Custom Format in Emetric Mode to edit Horizontal Grid Interval.";
+            oHorizontalGridline.helpTip = enabled
+                ? "Editing Grid Module Width changes Horizontal Grid Interval through the current Horizontal Steps."
+                : "Choose Custom Format in Emetric Mode to edit Grid Module Width.";
         } catch (_) {}
     }
 
@@ -9462,8 +9784,8 @@ sold or otherwise used without prior written permission from the copyright holde
     function anamorphicFormatChanged() {
         setDiagnosticAction(
             activeAnamorphicMode()
-                ? "Enable Custom Page Size"
-                : "Disable Custom Page Size",
+                ? "Enable Custom Format"
+                : "Disable Custom Format",
             true
         );
 
@@ -9487,7 +9809,7 @@ sold or otherwise used without prior written permission from the copyright holde
         updatePreviewDocument();
     }
 
-    // ---------- Editable custom page dimensions ----------
+    // ---------- Editable custom format dimensions ----------
 
     function isPageDimensionField(field) {
         return (
@@ -9565,15 +9887,15 @@ sold or otherwise used without prior written permission from the copyright holde
                         currentResult.pageWidth;
 
                     // Locked ratio means Width also derives a new Height,
-                    // which changes Row Leading.
+                    // which changes Vertical Grid Interval.
                     exactLineSpaceMM = null;
                 }
             } else {
                 exactPageHeightMM =
                     targetDimensionMM;
 
-                // Page Height changes Leading through the unchanged Row Grid
-                // Group. It supersedes an explicitly edited Leading value.
+                // Page Height changes Grid Interval through the unchanged Vertical Grid
+                // Steps. It supersedes an explicitly edited Leading value.
                 exactLineSpaceMM = null;
 
                 if (lockRatio) {
@@ -9631,6 +9953,242 @@ sold or otherwise used without prior written permission from the copyright holde
                 updateFromPageDimension(field);
             };
         })(pageDimensionFields[pageDimensionIndex]);
+    }
+
+    function isPageRatioField(field) {
+        return (
+            field === oFormatRatio.a ||
+            field === oFormatRatio.b
+        );
+    }
+
+    function pageRatioFallback(field) {
+        if (currentResult) {
+            return field === oFormatRatio.a
+                ? currentResult.formatRatioHorizontal
+                : currentResult.formatRatioVertical;
+        }
+
+        return field === oFormatRatio.a ? 1 : 1.5;
+    }
+
+    function updateFromPageRatio() {
+        if (!activeAnamorphicMode()) {
+            updateAnamorphicFormatControls();
+            update();
+            return;
+        }
+
+        try {
+            var ratioHorizontal = positive(
+                parseNumber(oFormatRatio.a.text, 1),
+                "Page Ratio, first value"
+            );
+            var ratioVertical = positive(
+                parseNumber(oFormatRatio.b.text, 1.5),
+                "Page Ratio, second value"
+            );
+
+            var anchorWidth = currentResult && currentResult.pageWidth > 0
+                ? currentResult.pageWidth
+                : pageDimensionFallbackMM(oPageWidth);
+
+            exactPageWidthMM = anchorWidth;
+            exactPageHeightMM =
+                anchorWidth /
+                ratioHorizontal *
+                ratioVertical;
+            exactLineSpaceMM = null;
+
+            update();
+            syncCompactControls();
+            markDirty();
+            updatePreviewDocument();
+        } catch (_) {
+            update();
+        }
+    }
+
+    var pageRatioFields = [
+        oFormatRatio.a,
+        oFormatRatio.b
+    ];
+
+    for (var pageRatioIndex = 0;
+         pageRatioIndex < pageRatioFields.length;
+         pageRatioIndex++) {
+        (function (field) {
+            field.onChanging = function () {
+                markDirty();
+            };
+
+            field.onChange = function () {
+                normalizeArithmeticNumberField(
+                    field,
+                    pageRatioFallback(field)
+                );
+
+                updateFromPageRatio();
+            };
+        })(pageRatioFields[pageRatioIndex]);
+    }
+
+    function isCustomFormatGridField(field) {
+        return (
+            field === oVerticalLine ||
+            field === oVerticalGridline ||
+            field === oHorizontalLine ||
+            field === oHorizontalGridline
+        );
+    }
+
+    function currentHorizontalPageStepCount() {
+        return positive(
+            parseNumber(fGridGroupH.text, 6) *
+            parseNumber(fHorizontalGroup.text, 6) +
+            parseNumber(fMarginLeft.factor.text, 2) -
+            1 +
+            parseNumber(fMarginRight.factor.text, 2) -
+            1,
+            "Horizontal page grid steps"
+        );
+    }
+
+    function currentVerticalPageStepCount() {
+        return positive(
+            parseNumber(fGridGroupV.text, 9) *
+            parseNumber(fVerticalGroup.text, 6) +
+            parseNumber(fMarginTop.factor.text, 2) -
+            1 +
+            parseNumber(fMarginBottom.factor.text, 4) -
+            1,
+            "Vertical page grid steps"
+        );
+    }
+
+    function parseCustomGridMeasureMM(field, fallbackMM) {
+        return unitToMM(
+            parseMeasureInput(
+                field.text,
+                currentUnitIndex,
+                mmToUnit(
+                    fallbackMM,
+                    currentUnitIndex
+                )
+            ),
+            currentUnitIndex
+        );
+    }
+
+    function customGridFallbackMM(field) {
+        if (currentResult) {
+            if (field === oVerticalLine) return currentResult.verticalLine;
+            if (field === oVerticalGridline) return currentResult.verticalGridline;
+            if (field === oHorizontalLine) return currentResult.horizontalLine;
+            if (field === oHorizontalGridline) return currentResult.horizontalGridline;
+        }
+
+        return unitToMM(5, currentUnitIndex);
+    }
+
+    function updateFromCustomGridField(field) {
+        if (!activeAnamorphicMode()) {
+            updateAnamorphicFormatControls();
+            update();
+            return;
+        }
+
+        var preservedVerticalSteps =
+            String(fVerticalGroup.text);
+        var preservedHorizontalSteps =
+            String(fHorizontalGroup.text);
+
+        try {
+            var editedValueMM = positive(
+                parseCustomGridMeasureMM(
+                    field,
+                    customGridFallbackMM(field)
+                ),
+                "Grid value"
+            );
+
+            if (field === oVerticalGridline) {
+                editedValueMM =
+                    editedValueMM /
+                    positive(
+                        parseNumber(fVerticalGroup.text, 6),
+                        "Vertical Grid – Steps"
+                    );
+            } else if (field === oHorizontalGridline) {
+                editedValueMM =
+                    editedValueMM /
+                    positive(
+                        parseNumber(fHorizontalGroup.text, 6),
+                        "Horizontal Grid – Steps"
+                    );
+            }
+
+            if (
+                field === oVerticalLine ||
+                field === oVerticalGridline
+            ) {
+                exactPageHeightMM =
+                    editedValueMM *
+                    currentVerticalPageStepCount();
+
+                exactLineSpaceMM = null;
+            } else {
+                exactPageWidthMM =
+                    editedValueMM *
+                    currentHorizontalPageStepCount();
+            }
+
+            update();
+
+            fVerticalGroup.text =
+                preservedVerticalSteps;
+            fHorizontalGroup.text =
+                preservedHorizontalSteps;
+
+            syncCompactControls();
+            markDirty();
+            updatePreviewDocument();
+        } catch (_) {
+            fVerticalGroup.text =
+                preservedVerticalSteps;
+            fHorizontalGroup.text =
+                preservedHorizontalSteps;
+            update();
+        }
+    }
+
+    var customFormatGridFields = [
+        oVerticalLine,
+        oVerticalGridline,
+        oHorizontalLine,
+        oHorizontalGridline
+    ];
+
+    for (var customGridFieldIndex = 0;
+         customGridFieldIndex < customFormatGridFields.length;
+         customGridFieldIndex++) {
+        (function (field) {
+            field.onChanging = function () {
+                markDirty();
+            };
+
+            field.onChange = function () {
+                normalizeEditableMeasureField(
+                    field,
+                    mmToUnit(
+                        customGridFallbackMM(field),
+                        currentUnitIndex
+                    )
+                );
+
+                updateFromCustomGridField(field);
+            };
+        })(customFormatGridFields[customGridFieldIndex]);
     }
 
     function isLinkedTypeSizeField(field) {
@@ -9782,7 +10340,7 @@ sold or otherwise used without prior written permission from the copyright holde
                         );
 
                         var metricsRatio =
-                            parseNumber(fMetricsLine.a.text, 4);
+                            parseNumber(fMetricsLine.a.text, 1);
 
                         var derivedLineRatio =
                             exactLineSpaceMM *
@@ -9809,7 +10367,9 @@ sold or otherwise used without prior written permission from the copyright holde
         (function (field) {
             if (
                 isLinkedTypeSizeField(field) ||
-                isPageDimensionField(field)
+                isPageDimensionField(field) ||
+                isPageRatioField(field) ||
+                isCustomFormatGridField(field)
             ) return;
 
             field.onChanging = function () {
@@ -9820,11 +10380,7 @@ sold or otherwise used without prior written permission from the copyright holde
                     exactLineSpaceMM = null;
                 }
 
-                if (
-                    field === fGridGroupH ||
-                    field === fGridRatio.a ||
-                    field === fGridRatio.b
-                ) {
+                if (field === fGridGroupH) {
                     exactGridRows = null;
                 }
 
@@ -9857,11 +10413,7 @@ sold or otherwise used without prior written permission from the copyright holde
                     exactLineSpaceMM = null;
                 }
 
-                if (
-                    field === fGridGroupH ||
-                    field === fGridRatio.a ||
-                    field === fGridRatio.b
-                ) {
+                if (field === fGridGroupH) {
                     exactGridRows = null;
                 }
 
@@ -9883,25 +10435,6 @@ sold or otherwise used without prior written permission from the copyright holde
 
                 if (field === fGridGroupV) {
                     exactGridRows = normalizedValue;
-
-                    // Keep Module Ratio synchronized with directly edited Rows.
-                    var columns =
-                        parseNumber(fGridGroupH.text, 6);
-                    var ratioHorizontal =
-                        parseNumber(fGridRatio.a.text, 2);
-
-                    if (
-                        columns > 0 &&
-                        ratioHorizontal > 0 &&
-                        exactGridRows > 0
-                    ) {
-                        fGridRatio.b.text =
-                            formatInputNumber(
-                                exactGridRows *
-                                ratioHorizontal /
-                                columns
-                            );
-                    }
                 }
 
                 update();
@@ -10231,8 +10764,8 @@ sold or otherwise used without prior written permission from the copyright holde
     previewCheckbox.onClick = function () {
         setDiagnosticAction(
             previewCheckbox.value
-                ? "Enable Live Preview"
-                : "Disable Live Preview",
+                ? "Enable Preview"
+                : "Disable Preview",
             true
         );
 
@@ -10294,32 +10827,7 @@ sold or otherwise used without prior written permission from the copyright holde
             }
 
             if (fieldRole === "rows") {
-                exactGridRows =
-                    normalizedValue;
-
-                var columns =
-                    parseNumber(
-                        fGridGroupH.text,
-                        6
-                    );
-                var ratioHorizontal =
-                    parseNumber(
-                        fGridRatio.a.text,
-                        2
-                    );
-
-                if (
-                    columns > 0 &&
-                    ratioHorizontal > 0 &&
-                    exactGridRows > 0
-                ) {
-                    fGridRatio.b.text =
-                        formatInputNumber(
-                            exactGridRows *
-                            ratioHorizontal /
-                            columns
-                        );
-                }
+                exactGridRows = normalizedValue;
             }
         }
 
@@ -10694,6 +11202,7 @@ sold or otherwise used without prior written permission from the copyright holde
         );
         saveLastUsedPresetNow(false);
         removePresetLastUsedIdleTask();
+        removeColorHexRefreshIdleTask();
 
         try {
             previewCheckbox.value = false;
@@ -10720,6 +11229,7 @@ sold or otherwise used without prior written permission from the copyright holde
         rememberCompactUIState(true);
         saveLastUsedPresetNow(false);
         removePresetLastUsedIdleTask();
+        removeColorHexRefreshIdleTask();
 
         compactClosing = true;
 
@@ -10742,6 +11252,287 @@ sold or otherwise used without prior written permission from the copyright holde
 
         emetricInitialShowHandled = true;
     };
+
+    function ensureTooltipFallback(control) {
+        if (!control) return;
+
+        try {
+            if (
+                control.helpTip === undefined ||
+                control.helpTip === null ||
+                String(control.helpTip) === ""
+            ) {
+                control.helpTip = "[Empty]";
+            }
+        } catch (_) {}
+
+        try {
+            var children = control.children;
+
+            if (children) {
+                for (var i = 0; i < children.length; i++) {
+                    ensureTooltipFallback(children[i]);
+                }
+            }
+        } catch (_) {}
+    }
+
+
+    function setTooltip(control, text) {
+        try {
+            if (control) {
+                control.helpTip = String(text);
+            }
+        } catch (_) {}
+    }
+
+    function setFieldTooltip(field, text) {
+        setTooltip(field, text);
+        try { setTooltip(field.label, text); } catch (_) {}
+        try { setTooltip(field.unitLabel, text); } catch (_) {}
+    }
+
+    function setRatioTooltip(row, labelText, firstText, secondText) {
+        try { setTooltip(row.label, labelText); } catch (_) {}
+        try { setTooltip(row.a, firstText || labelText); } catch (_) {}
+        try { setTooltip(row.b, secondText || labelText); } catch (_) {}
+    }
+
+    function setMarginTooltip(row, factorText, resultText) {
+        try { setTooltip(row.label, factorText); } catch (_) {}
+        try { setTooltip(row.factor, factorText); } catch (_) {}
+        try { setTooltip(row.result, resultText || factorText); } catch (_) {}
+        try { setTooltip(row.result.unitLabel, resultText || factorText); } catch (_) {}
+    }
+
+    function setColorSelectorTooltip(selector, fieldText, swatchText) {
+        try { setTooltip(selector.label, fieldText); } catch (_) {}
+        try { setTooltip(selector.hexField, fieldText); } catch (_) {}
+        try { setTooltip(selector.preview, swatchText || fieldText); } catch (_) {}
+    }
+
+    function applyLatestTooltipCopy() {
+        // Top bar
+        setTooltip(presetBar, "Manage saved Emetric settings and reuse previous layout configurations.");
+        setTooltip(presetLabel, "Choose a saved preset or the default settings.");
+        setTooltip(presetDropdown, "Choose a saved preset or the default settings.");
+        setTooltip(presetSaveButton, "Save preset");
+        setTooltip(presetDeleteButton, "Delete preset");
+
+        // Emetric Mode
+        setTooltip(pFormatMode, "Choose whether type metrics define the format or whether a custom page format drives the grid.");
+        setTooltip(typeLedFormat, "Metrics and Leading define the page format.");
+        setTooltip(anamorphicFormat, "Page Width and Height define the Horizontal and Vertical Grid Interval values.");
+
+        // Measurement and Sources
+        setTooltip(pType, "Set units and choose the metric source used to calculate type proportions.");
+        setTooltip(unitLabel, "Choose the measurement unit shown in editable and calculated fields.");
+        setTooltip(unitDropdown, "Choose the measurement unit shown in editable and calculated fields.");
+        try {
+            var unitTips = [
+                "Use Millimeters (mm) as the active measurement unit.",
+                "Use Points (pt) as the active measurement unit.",
+                "Use Picas (p) as the active measurement unit.",
+                "Use Ciceros (c) as the active measurement unit.",
+                "Use Didot Points (dp) as the active measurement unit.",
+                "Use Edo (e) as the active measurement unit.",
+                "Use Edo Points (ep) as the active measurement unit."
+            ];
+            for (var ui = 0; ui < unitDropdown.items.length && ui < unitTips.length; ui++) {
+                setTooltip(unitDropdown.items[ui], unitTips[ui]);
+            }
+        } catch (_) {}
+
+        setTooltip(metricsSourceLabel, "Choose Selected Font, Emetric Decimal, Emetric Dozenal, or Custom Metric.");
+        setTooltip(metricsSourceDropdown, "Choose Selected Font, Emetric Decimal, Emetric Dozenal, or Custom Metric.");
+        try {
+            var metricTips = {
+                selectedFont: "Use Selected Font as the source for typographic proportions.",
+                decimal: "Use Emetric Decimal as the source for typographic proportions.",
+                dozenal: "Use Emetric Dozenal as the source for typographic proportions.",
+                custom: "Use Custom Metric as the source for typographic proportions."
+            };
+            for (var mi = 0; mi < metricsSourceDropdown.items.length; mi++) {
+                var metricItem = metricsSourceDropdown.items[mi];
+                if (metricItem && metricItem.emetricSourceKey) {
+                    setTooltip(metricItem, metricTips[metricItem.emetricSourceKey]);
+                }
+            }
+        } catch (_) {}
+
+        setFieldTooltip(customRatioMetrics, "Set the Custom Metric ratio value for Metrics.");
+        setFieldTooltip(customRatioAscender, "Set the Custom Metric ratio value for Ascender.");
+        setFieldTooltip(customRatioCapHeight, "Set the Custom Metric ratio value for Cap Height.");
+        setFieldTooltip(customRatioXHeight, "Set the Custom Metric ratio value for x-Height.");
+        setFieldTooltip(customRatioDescender, "Set the Custom Metric ratio value for Descender.");
+
+        // Type Size and Type Leading
+        setTooltip(pTypeSize, "Review or edit the typographic metric values used by the grid.");
+        setFieldTooltip(fMetrics, "The em-based reference size used for all typographic proportions.");
+        setFieldTooltip(oAscender, "Derived Ascender value based on the selected metric source.");
+        setFieldTooltip(oUppercase, "Derived Cap Height value based on the selected metric source.");
+        setFieldTooltip(oLowercase, "Derived x-Height value based on the selected metric source.");
+        setFieldTooltip(oDescender, "Derived Descender value based on the selected metric source.");
+
+        setTooltip(pLineSpace, "Set the relationship between the type metric size and leading.");
+        setFieldTooltip(oLineSpace, "The vertical leading used by Type Defined Format.");
+        setRatioTooltip(
+            fMetricsLine,
+            "Set the Metrics & Leading Ratio.",
+            "First value in the Metrics & Leading Ratio.",
+            "Second value in the Metrics & Leading Ratio."
+        );
+
+        // Colors
+        setTooltip(colorPanel, "Set guide, margin, column, baseline and document grid colors.");
+        setTooltip(profileLabel, "Choose a predefined color theme or keep a custom theme.");
+        setTooltip(colorProfileDropdown, "Choose a predefined color theme or keep a custom theme.");
+        try {
+            var colorTips = [
+                "Apply the Emetric color theme.",
+                "Apply the InDesign color theme.",
+                "Apply the Monochrome color theme.",
+                "Apply the Blueprint color theme.",
+                "Apply the Warm Drafting color theme.",
+                "Apply the Bauhaus color theme.",
+                "Apply the Nordic color theme.",
+                "Apply the Forest color theme.",
+                "Apply the High Contrast color theme.",
+                "Apply the Soft Pastel color theme.",
+                "Shown when one or more colors have been edited manually."
+            ];
+            for (var ci = 0; ci < colorProfileDropdown.items.length && ci < colorTips.length; ci++) {
+                setTooltip(colorProfileDropdown.items[ci], colorTips[ci]);
+            }
+        } catch (_) {}
+        setColorSelectorTooltip(guideColorSelector, "Set the guides color as a HEX value.", "Open the system color picker for guides.");
+        setColorSelectorTooltip(marginColorSelector, "Set the margins color as a HEX value.", "Open the system color picker for margins.");
+        setColorSelectorTooltip(columnColorSelector, "Set the columns color as a HEX value.", "Open the system color picker for columns.");
+        setColorSelectorTooltip(baselineGridColorSelector, "Set the baseline grid color as a HEX value.", "Open the system color picker for baseline grid.");
+        setColorSelectorTooltip(documentGridColorSelector, "Set the document grid color as a HEX value.", "Open the system color picker for document grid.");
+
+        // Vertical and Horizontal Grid
+        setTooltip(pVertical, "Define the vertical grid structure used for rows and baseline spacing.");
+        setFieldTooltip(oVerticalLine, activeAnamorphicMode()
+            ? "Editing Vertical Grid Interval changes page height and type size while preserving Vertical Steps."
+            : "Choose Custom Format in Emetric Mode to edit Vertical Grid Interval.");
+        setFieldTooltip(fVerticalGroup, "Number of vertical grid intervals per vertical grid module.");
+        try { setTooltip(rowOffsetSource.label, "Choose which type metric the vertical grid offset aligns to."); } catch (_) {}
+        setTooltip(rowOffsetSource, "Choose which type metric the vertical grid offset aligns to.");
+        setFieldTooltip(oVerticalGridline, activeAnamorphicMode()
+            ? "Editing Grid Module Height changes Vertical Grid Interval through the current Vertical Steps."
+            : "Choose Custom Format in Emetric Mode to edit Grid Module Height.");
+        setFieldTooltip(oGridHeight, "Calculated total height of all vertical grid modules.");
+        setFieldTooltip(oVerticalOffset, "Calculated vertical grid offset from the selected alignment metric.");
+        setTooltip(majorGridHorizontalCheckbox, "Create major vertical grid module guides in the InDesign document.");
+
+        setTooltip(pHorizontal, "Define the horizontal grid structure used for columns and page width.");
+        setFieldTooltip(oHorizontalLine, activeAnamorphicMode()
+            ? "Editing Horizontal Grid Interval changes page width while preserving Horizontal Steps."
+            : "Choose Custom Format in Emetric Mode to edit Horizontal Grid Interval.");
+        setFieldTooltip(fHorizontalGroup, "Number of horizontal grid intervals per horizontal grid module.");
+        try { setTooltip(columnOffsetSource.label, "Choose which type metric the horizontal grid offset aligns to."); } catch (_) {}
+        setTooltip(columnOffsetSource, "Choose which type metric the horizontal grid offset aligns to.");
+        setFieldTooltip(oHorizontalGridline, activeAnamorphicMode()
+            ? "Editing Grid Module Width changes Horizontal Grid Interval through the current Horizontal Steps."
+            : "Choose Custom Format in Emetric Mode to edit Grid Module Width.");
+        setFieldTooltip(oGridWidth, "Calculated total width of all horizontal grid modules.");
+        setFieldTooltip(oHorizontalOffset, "Calculated horizontal grid offset from the selected alignment metric.");
+        setTooltip(majorGridVerticalCheckbox, "Create major horizontal grid module guides in the InDesign document.");
+
+        try {
+            var alignTips = [
+                "Align the grid offset to Metrics.",
+                "Align the grid offset to Ascender.",
+                "Align the grid offset to Cap Height.",
+                "Align the grid offset to x-Height."
+            ];
+            for (var ai = 0; ai < rowOffsetSource.items.length && ai < alignTips.length; ai++) {
+                setTooltip(rowOffsetSource.items[ai], alignTips[ai]);
+                setTooltip(columnOffsetSource.items[ai], alignTips[ai]);
+            }
+        } catch (_) {}
+
+        // Grid Modules
+        setTooltip(pGridGroup, "Set the number of grid modules and review calculated margins and gutters.");
+        setFieldTooltip(fGridGroupH, "Number of horizontal grid modules across the page.");
+        setFieldTooltip(fGridGroupV, "Number of vertical grid modules down the page.");
+        setFieldTooltip(oGridMarginV, "Calculated vertical margin offset used by row modules.");
+        setFieldTooltip(oGutterV, "Calculated gutter between row module areas.");
+        setFieldTooltip(oGridMarginH, "Calculated horizontal margin offset used by column modules.");
+        setFieldTooltip(oGutterH, "Calculated gutter between column module areas.");
+        setTooltip(guideRowsCheckbox, "Create guides for row gutters in the InDesign document.");
+        setTooltip(guideColumnsCheckbox, "Create guides for column gutters in the InDesign document.");
+        setTooltip(columnGuidesCheckbox, "Applies the calculated Column Gutter to InDesign’s Margins and Columns settings. It does not change Emetric’s grid calculations.");
+
+        // Page and areas
+        setTooltip(pPage, "Set or review the page dimensions and page ratio.");
+        setFieldTooltip(oPageWidth, activeAnamorphicMode()
+            ? "Editing Width changes the Horizontal Grid Interval while preserving the current horizontal page grid steps."
+            : "Choose Custom Format in Emetric Mode to edit Width.");
+        setFieldTooltip(oPageHeight, activeAnamorphicMode()
+            ? "Editing Height changes the Vertical Grid Interval while preserving the current vertical page grid steps."
+            : "Choose Custom Format in Emetric Mode to edit Height.");
+        setRatioTooltip(
+            oFormatRatio,
+            "Set or review the page width/height ratio.",
+            activeAnamorphicMode()
+                ? "Editing Page Ratio keeps Width and derives Height from the entered ratio."
+                : "Choose Custom Format in Emetric Mode to edit Page Ratio.",
+            activeAnamorphicMode()
+                ? "Editing Page Ratio keeps Width and derives Height from the entered ratio."
+                : "Choose Custom Format in Emetric Mode to edit Page Ratio."
+        );
+        setTooltip(lockFormatRatio, activeAnamorphicMode()
+            ? "Keeps the current page width/height ratio when either dimension is edited."
+            : "Choose Custom Format to lock the page ratio.");
+
+        setTooltip(pMargins, "Set margin factors used to calculate page margins from the grid interval.");
+        setMarginTooltip(fMarginTop, "Set the top margin factor.", "Calculated top margin value.");
+        setMarginTooltip(fMarginBottom, "Set the bottom margin factor.", "Calculated bottom margin value.");
+        setMarginTooltip(fMarginLeft, "Set the left or inside margin factor.", "Calculated left or inside margin value.");
+        setMarginTooltip(fMarginRight, "Set the right or outside margin factor.", "Calculated right or outside margin value.");
+
+        setTooltip(pModuleArea, "Shows the calculated usable area inside each grid module.");
+        setFieldTooltip(oIntersectionW, "Calculated width of one module area after gutters.");
+        setFieldTooltip(oIntersectionH, "Calculated height of one module area after gutters.");
+        setTooltip(pTypeArea, "Shows the calculated type area inside the page margins.");
+        setFieldTooltip(oTypeWidth, "Calculated width of the type area.");
+        setFieldTooltip(oTypeHeight, "Calculated height of the type area.");
+
+        // Document Options and bottom bar
+        setTooltip(pLayout, "Choose document-level options for the generated InDesign document.");
+        setTooltip(facingPages, "Use facing pages and switch margin labels from Left/Right to Inside/Outside.");
+        setTooltip(useAMaster, "Apply the generated grid and guides to the A-Parent page.");
+        setTooltip(snapToGrid, "Enable snapping to the document grid in the generated document.");
+        setTooltip(snapToGuides, "Enable snapping to guides in the generated document.");
+        setTooltip(gridsInBack, "Display document and baseline grids behind page content.");
+        setTooltip(infoPage, "Add a generated page with Emetric settings and calculated values.");
+        setTooltip(placeholderText, "Creates a text frame matching the Type Area and fills it with InDesign placeholder text.");
+
+        setTooltip(bottomBar, "Controls preview, compact view and document creation.");
+        setTooltip(bottomInfoText, "Shows the current Emetric version and copyright information.");
+        setTooltip(previewCheckbox, "Keep a live preview document open while changing settings.");
+        setTooltip(compactViewButton, "Switch to Compact View");
+        setTooltip(resetButton, "Reset all fields to the default Emetric settings.");
+        setTooltip(cancelButton, "Close Emetric without creating a document.");
+        setTooltip(createButton, "Create a new InDesign document from the current settings.");
+
+        // Compact View
+        setTooltip(compactWindow, "Compact View for live layout inspection.");
+        setTooltip(compactPresetDropdown, "Choose a saved preset or the default settings.");
+        setTooltip(compactMetrics, "Edit Metrics from Compact View.");
+        setTooltip(compactColumns, "Edit the number of grid columns from Compact View.");
+        setTooltip(compactRows, "Edit the number of grid rows from Compact View.");
+        setTooltip(compactPreviewCheckbox, "Keep a live preview document open while changing settings.");
+        setTooltip(compactFullSettingsButton, "Open Full Settings");
+        setTooltip(compactCreateButton, "Create a new InDesign document from the current settings.");
+    }
+
+    applyLatestTooltipCopy();
+
+    ensureTooltipFallback(w);
+    ensureTooltipFallback(compactWindow);
 
     var storedUIState =
         ensurePresetUIState();

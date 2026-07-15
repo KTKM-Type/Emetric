@@ -1,10 +1,104 @@
 # Changelog
+## 0.42.0-alpha.23
+
+- Set [Basic Paragraph] to Align Left for Placeholder Text output.
+- Shortened the visible Metrics & Leading Ratio label to M & L Ratio while keeping the full tooltip text.
+
+## 0.42.0-alpha.22
+
+- Set Placeholder Text paragraph direction explicitly to **Left-to-Right** through **[Basic Paragraph]**.
+- Keep Placeholder Text language aligned with the user’s default InDesign language instead of hard-coding a language.
+- Preserve the alpha.21 behavior where Placeholder Text uses **[Basic Paragraph]** rather than a separate paragraph style.
+
+## 0.42.0-alpha.18
+
+- Centered **Horizontal Grid Guides** over the **Type Area** instead of the full page, fixing guide placement when left and right margins differ.
+- Updated the tooltip inventory by applying the latest suggested texts to the main tooltip column.
+- Kept the restored live Preview behavior from alpha.17.
+
+## 0.42.0-alpha.17
+
+- Restored Preview update behavior to the pre-alpha.16 live model after field edits proved unstable in InDesign.
+- Kept tooltip coverage fallback so controls without specific copy are marked as `[Empty]`.
+- Updated tooltip inventory workflow with proposed replacements for `[Empty]` placeholders.
+
+
+
+## 0.42.0-alpha.17
+
+- Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
+- Editing **Vertical Grid Interval** or **Grid Module Height** now derives page height and type size while preserving Vertical Steps.
+- Editing **Horizontal Grid Interval** or **Grid Module Width** now derives page width while preserving Horizontal Steps.
+- Strengthened the ScriptUI repaint fix for **Baseline Grid** and **Document Grid** HEX fields when **Custom Metric** expands or collapses.
+
+## 0.42.0-alpha.14
+
+- Renamed **Gridline Every** to **Grid Interval** across the interface, tooltips and index output.
+- Restored the preview pasteboard/background behavior to the earlier white/default setting.
+- Fixed a ScriptUI repaint issue where the **Baseline Grid** and **Document Grid** HEX fields could disappear after choosing **Custom Metric**.
+
 
 All notable changes to Emetric should be recorded in this file.
 
 The project uses [Semantic Versioning](https://semver.org/) with prerelease identifiers such as `alpha.1`, `beta.1` and `rc.1`.
 
 ## [Unreleased]
+
+## [0.42.0-alpha.16] — 2026-07-15
+
+### Changed
+
+- Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
+- Editing vertical grid fields derives page height and type size from the existing vertical page-step structure.
+- Editing horizontal grid fields derives page width from the existing horizontal page-step structure.
+- Reinforced repaint handling for the lower color HEX fields after selecting **Custom Metric**.
+
+## [0.42.0-alpha.14] — 2026-07-15
+
+### Changed
+
+- Moved **Grid Width** to **Horizontal Grid** under **Grid Module Width**.
+- Moved **Grid Height** to **Vertical Grid** under **Grid Module Height**.
+- Moved **Facing Pages** back to **Document Options**.
+- Made **Page Ratio** editable in **Custom Format**; editing the ratio keeps Width as the anchor and derives Height.
+- Simplified margin labels to **Top**, **Bottom**, **Left**, **Right**, **Inside**, and **Outside**.
+- Moved **Module Area** before **Type Area**.
+
+## [0.42.0-alpha.12] — 2026-07-15
+
+### Changed
+
+- Moved **Emetric Mode** before **Measurement and Sources**.
+- Renamed grid controls to **Alignment** and **Steps** in Vertical and Horizontal Grid.
+- Reordered Vertical and Horizontal Grid controls as Grid Interval, Steps, Alignment, Grid Module Height/Width, Offset, and Grid Guides.
+- Removed **Module Ratio** from Grid Modules; Rows is now a direct editable module value.
+- Moved **Grid Width** into Vertical Grid under Grid Module Height.
+- Moved Grid Modules checkboxes to the end of the section.
+- Removed **Spread** from Page Size.
+- Renamed **Format Ratio** to **Page Ratio** and placed **Facing Pages** before Page Ratio.
+
+## [0.42.0-alpha.11] — 2026-07-15
+
+### Changed
+
+- Renamed **Row Grid** to **Vertical Grid** and **Column Grid** to **Horizontal Grid**.
+- Renamed grid controls: **Group** to **Grid Steps**, **Offset Source** to **Grid Align**, and **Row/Column Grid Lines** to **Grid Guides**.
+- Renamed **Row Leading** and **Column Leading** to **Grid Interval** in the Vertical and Horizontal Grid sections.
+- Renamed **Module Size** to **Grid Module Height** in Vertical Grid and **Grid Module Width** in Horizontal Grid.
+- Reordered Vertical and Horizontal Grid controls as Grid Align, Grid Steps, Grid Module Height/Width, and Grid Interval.
+- Moved Row Margin, Row Gutter, Row Gutter Guides, Column Margin, Column Gutter, and Column Gutter Guides to **Grid Modules**.
+
+## [0.42.0-alpha.10] — 2026-07-15
+
+### Changed
+
+- Renamed **Format Mode** to **Emetric Mode**.
+- Renamed **Type-led Format** to **Type Defined Format** and **Custom Page Size** to **Custom Format**.
+- Made **Page Size**, **Margins**, **Type Area**, and **Module Area** separate sections.
+- Reordered Page Size controls as Width, Height, Spread, Format Ratio, Facing Pages, and Lock Page Ratio.
+- Renamed the **Leading** section to **Type Leading**.
+- Kept **Row Leading** and **Column Leading** labels visible in both Emetric modes.
+- Renamed **Live Preview** back to **Preview**.
 
 ## [0.42.0-alpha.9] — 2026-07-14
 

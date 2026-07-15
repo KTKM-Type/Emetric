@@ -4,25 +4,27 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.9`
+> **Status:** Alpha — current source version `0.42.0-alpha.23`
 
 ## Main features
 
 - Font-based measurements using **Selected Font**
 - **Emetric Decimal**, **Emetric Dozenal**, and **Custom Metric** sources
-- Typographic size, leading, vertical grid, and horizontal grid calculations
-- Modular columns and rows with proportional gutters and margins
-- Separate **Format Mode** section with **Type-led Format** and **Custom Page Size**
-- Format Mode uses tooltips rather than visible explanatory notes
-- Clear Page flow with Page Size, Margins, Calculated values, and Page Setup
-- Dynamic Row Leading and Column Leading labels in Custom Page Size
+- Typographic size, Type Leading, Vertical Grid, and Horizontal Grid calculations
+- Direct modular Columns and Rows with calculated gutters and margins
+- **Emetric Mode** section placed before Measurement and Sources, with **Type Defined Format** and **Custom Format**
+- Emetric Mode uses tooltips rather than visible explanatory notes
+- Separate Page Size, Margins, Module Area, Type Area, and Grid Modules sections; Page Size uses Width, Height, editable Page Ratio, and Lock Page Ratio
+- Vertical and Horizontal Grid sections use Grid Interval, Steps, Alignment, Grid Module Height/Width, Grid Height/Width, and Offset terminology
 - Optional **Lock Page Ratio** for custom page resizing
-- Refined bottom control bar with separated copyright, Live Preview, and action controls
-- In Custom Page Size, page dimensions recalculate Column Leading and Row Leading from the current page grid-step structure
+- Refined bottom control bar with separated copyright, Preview, and action controls
+- In Custom Format, page dimensions and editable grid interval/module fields recalculate from the current page grid-step structure
+- Preview uses the restored live update behavior from before alpha.16
+- Tooltips are assigned throughout the UI from the latest tooltip inventory; unused tooltip slots display `[Empty]`
 - Margin-derived grid-step changes are preserved when page width or height is edited
-- InDesign Horizontal Gridline Division follows Column Leading when custom page dimensions are active
+- InDesign Horizontal Gridline Division follows the Horizontal Grid value “Grid Interval” when custom page dimensions are active
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
-- Optional facing pages, A-Parent, index page, and placeholder text
+- Optional facing pages, A-Parent, index page, and placeholder text under Document Options
 - Color themes, presets, and diagnostic logging
 - Creation of native InDesign guides, margins, columns, grids, and paragraph styles
 
@@ -65,3 +67,7 @@ Emetric is proprietary software and is **not open source**. All rights are reser
 Based on Kristian Möller's Konstfack Master Project, 2012–2014.
 
 Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
+
+### 0.42.0-alpha.23 notes
+
+This iteration keeps Placeholder Text on **[Basic Paragraph]**, sets its paragraph direction to **Left-to-Right**, sets **[Basic Paragraph]** to **Align Left**, and keeps its language aligned with the default InDesign language. The visible **Metrics & Leading Ratio** label is shortened to **M & L Ratio** while the full tooltip remains.
