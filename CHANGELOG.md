@@ -6,6 +6,19 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.12] — 2026-07-15
+
+### Changed
+
+- Moved **Emetric Mode** before **Measurement and Sources**.
+- Renamed grid controls to **Alignment** and **Steps** in Vertical and Horizontal Grid.
+- Reordered Vertical and Horizontal Grid controls as Gridline Every, Steps, Alignment, Grid Module Height/Width, Offset, and Grid Guides.
+- Removed **Module Ratio** from Grid Modules; Rows is now a direct editable module value.
+- Moved **Grid Width** into Vertical Grid under Grid Module Height.
+- Moved Grid Modules checkboxes to the end of the section.
+- Removed **Spread** from Page Size.
+- Renamed **Format Ratio** to **Page Ratio** and placed **Facing Pages** before Page Ratio.
+
 ## [0.42.0-alpha.11] — 2026-07-15
 
 ### Changed

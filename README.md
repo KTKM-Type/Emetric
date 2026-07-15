@@ -4,18 +4,18 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.11`
+> **Status:** Alpha — current source version `0.42.0-alpha.12`
 
 ## Main features
 
 - Font-based measurements using **Selected Font**
 - **Emetric Decimal**, **Emetric Dozenal**, and **Custom Metric** sources
 - Typographic size, Type Leading, Vertical Grid, and Horizontal Grid calculations
-- Modular columns and rows with proportional gutters and margins
-- Separate **Emetric Mode** section with **Type Defined Format** and **Custom Format**
+- Direct modular Columns and Rows with calculated gutters and margins
+- **Emetric Mode** section placed before Measurement and Sources, with **Type Defined Format** and **Custom Format**
 - Emetric Mode uses tooltips rather than visible explanatory notes
-- Separate Page Size, Margins, Type Area, Grid Modules, and Module Area sections
-- Vertical and Horizontal Grid sections use Gridline Every, Grid Steps, Grid Align, and Grid Module Height/Width terminology
+- Separate Page Size, Margins, Type Area, Grid Modules, and Module Area sections; Page Size uses Width, Height, Facing Pages, Page Ratio, and Lock Page Ratio
+- Vertical and Horizontal Grid sections use Gridline Every, Steps, Alignment, and Grid Module Height/Width terminology
 - Optional **Lock Page Ratio** for custom page resizing
 - Refined bottom control bar with separated copyright, Preview, and action controls
 - In Custom Format, page dimensions recalculate Horizontal and Vertical Gridline Every values from the current page grid-step structure
