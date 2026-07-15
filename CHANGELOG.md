@@ -1,7 +1,20 @@
 # Changelog
 
+## 0.42.0-alpha.18
 
-## 0.42.0-alpha.16
+- Centered **Horizontal Grid Guides** over the **Type Area** instead of the full page, fixing guide placement when left and right margins differ.
+- Updated the tooltip inventory by applying the latest suggested texts to the main tooltip column.
+- Kept the restored live Preview behavior from alpha.17.
+
+## 0.42.0-alpha.17
+
+- Restored Preview update behavior to the pre-alpha.16 live model after field edits proved unstable in InDesign.
+- Kept tooltip coverage fallback so controls without specific copy are marked as `[Empty]`.
+- Updated tooltip inventory workflow with proposed replacements for `[Empty]` placeholders.
+
+
+
+## 0.42.0-alpha.17
 
 - Made **Grid Interval** and **Grid Module Height/Width** editable in **Custom Format**.
 - Editing **Vertical Grid Interval** or **Grid Module Height** now derives page height and type size while preserving Vertical Steps.
