@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.10, 2026
+Version 0.42.0-alpha.11, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.10";
+    var VERSION = "0.42.0-alpha.11";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1263,8 +1263,8 @@ sold or otherwise used without prior written permission from the copyright holde
         positive(v.metrics, "Metrics");
         positive(v.metricsRatio, "Metrics/Line, första värdet");
         positive(v.lineRatio, "Metrics/Line, andra värdet");
-        positive(v.verticalGroup, "Vertical Grid – Group");
-        positive(v.horizontalGroup, "Horizontal Grid – Group");
+        positive(v.verticalGroup, "Vertical Grid – Grid Steps");
+        positive(v.horizontalGroup, "Horizontal Grid – Grid Steps");
         positive(v.gridGroupHorizontal, "Grid Modules – Columns");
         positive(v.gridGroupVertical, "Grid Modules – Rows");
         positive(v.gridRatioHorizontal, "Grid Modules – Module Ratio, första värdet");
@@ -1335,7 +1335,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 pageHeightOverride /
                 verticalStepCount;
 
-            // Type size follows Row Leading through the existing
+            // Type size follows Vertical Gridline Every through the existing
             // Metrics/Leading ratio.
             metrics =
                 verticalLine *
@@ -1354,7 +1354,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 horizontalStepCount;
         }
 
-        positive(horizontalLine, "Horizontal Grid – Line");
+        positive(horizontalLine, "Horizontal Grid – Gridline Every");
 
         var verticalGridline =
             verticalLine *
@@ -1393,8 +1393,8 @@ sold or otherwise used without prior written permission from the copyright holde
             offsetSourceValue(v.columnOffsetSourceIndex) / 2;
 
         // GRID MARGIN
-        // Horizontal values follow Column Leading; vertical values follow Row
-        // Leading. In normal mode these are identical. In Custom Format
+        // Horizontal values follow Horizontal Gridline Every; vertical values follow
+        // Vertical Gridline Every. In normal mode these are identical. In Custom Format
         // they may diverge while the grid-step structure is preserved.
         var gridMarginHorizontal =
             horizontalLine - offsetGridHorizontal;
@@ -2010,13 +2010,13 @@ sold or otherwise used without prior written permission from the copyright holde
             info.alignToBaseline = false;
             info.justification = Justification.LEFT_ALIGN;
 
-            // Paragraph indent follows the Column Grid offset.
+            // Paragraph indent follows the Horizontal Grid offset.
             info.leftIndent =
                 scriptNumber(r.offsetGridHorizontal) + " mm";
             info.firstLineIndent = "0 mm";
 
             // One left-aligned tab stop at:
-            // 2 × Column Module Size + Column Grid offset.
+            // 2 × Grid Module Width + Horizontal Grid offset.
             var infoTabPosition =
                 (2 * r.horizontalGridline) + r.offsetGridHorizontal;
 
@@ -2059,8 +2059,8 @@ sold or otherwise used without prior written permission from the copyright holde
         var gp = doc.gridPreferences;
 
         // DOCUMENT GRID
-        // InDesign's Horizontal Gridline Division follows Column Leading.
-        // The perpendicular grid division continues to follow Row Leading.
+        // InDesign's Horizontal Gridline Division follows Horizontal Gridline Every.
+        // The perpendicular grid division continues to follow Vertical Gridline Every.
         // This allows custom page sizes to use different horizontal and
         // vertical grid intervals while preserving the selected grid groups.
         try {
@@ -2084,7 +2084,7 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         // BASELINE GRID
-        // The first baseline follows the selected Row Offset Source.
+        // The first baseline follows the selected Vertical Grid Align source.
         // Offset is half the selected source measure, so the baseline start
         // equals two times the calculated Row Offset.
         try {
@@ -2150,7 +2150,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 } catch (__) {}
             }
 
-            // The first baseline follows the selected Row Offset Source.
+            // The first baseline follows the selected Vertical Grid Align source.
             try {
                 var tfp = frame.textFramePreferences;
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
@@ -2229,7 +2229,7 @@ sold or otherwise used without prior written permission from the copyright holde
             "x-Height:\t" + selectedMeasure(r.lowercase) + "\r" +
             "Descender:\t" + selectedMeasure(r.descender) + "\r\r" +
 
-            "Leading\r" +
+            "Type Leading\r" +
             "Leading:\t" + selectedMeasure(r.lineSpace) + "\r" +
             "Metrics : Leading:\t" +
                 formatNumber(v.metricsRatio) + ":" +
@@ -2239,43 +2239,35 @@ sold or otherwise used without prior written permission from the copyright holde
                 selectedMeasure(r.lineSpace) + "\r" +
             "Horizontal Gridline:\t" +
                 selectedMeasure(r.horizontalLine) +
-                " (Column Leading)\r" +
+                " (Horizontal Gridline Every)\r" +
             "Vertical Gridline:\t" +
                 selectedMeasure(r.lineSpace) +
-                " (Row Leading)\r" +
+                " (Vertical Gridline Every)\r" +
             "Document Grid Start:\t−" +
                 selectedMeasure(r.offsetGridVertical) + "\r" +
             "Baseline Start:\t" +
                 selectedMeasure(r.offsetGridVertical * 2) +
                 " from Top Margin\r\r" +
 
-            "Row Grid\r" +
-            "Leading:\t" + selectedMeasure(r.verticalLine) + "\r" +
-            "Group:\t" + formatNumber(v.verticalGroup) + "\r" +
-            "Module Size:\t" +
-                selectedMeasure(r.verticalGridline) + "\r" +
-            "Offset:\t" +
-                selectedMeasure(r.offsetGridVertical) + "\r" +
-            "Offset Source:\t" +
+            "Vertical Grid\r" +
+            "Grid Align:\t" +
                 options.rowOffsetSourceName + "\r" +
-            "Row Margin:\t" +
-                selectedMeasure(r.gridMarginVertical) + "\r" +
-            "Row Gutter:\t" +
-                selectedMeasure(r.gridGutterVertical) + "\r\r" +
-
-            "Column Grid\r" +
-            "Leading:\t" + selectedMeasure(r.horizontalLine) + "\r" +
-            "Group:\t" + formatNumber(v.horizontalGroup) + "\r" +
-            "Module Size:\t" +
-                selectedMeasure(r.horizontalGridline) + "\r" +
+            "Grid Steps:\t" + formatNumber(v.verticalGroup) + "\r" +
+            "Grid Module Height:\t" +
+                selectedMeasure(r.verticalGridline) + "\r" +
+            "Gridline Every:\t" + selectedMeasure(r.verticalLine) + "\r" +
             "Offset:\t" +
-                selectedMeasure(r.offsetGridHorizontal) + "\r" +
-            "Offset Source:\t" +
+                selectedMeasure(r.offsetGridVertical) + "\r\r" +
+
+            "Horizontal Grid\r" +
+            "Grid Align:\t" +
                 options.columnOffsetSourceName + "\r" +
-            "Column Margin:\t" +
-                selectedMeasure(r.gridMarginHorizontal) + "\r" +
-            "Column Gutter:\t" +
-                selectedMeasure(r.gridGutterHorizontal) + "\r\r" +
+            "Grid Steps:\t" + formatNumber(v.horizontalGroup) + "\r" +
+            "Grid Module Width:\t" +
+                selectedMeasure(r.horizontalGridline) + "\r" +
+            "Gridline Every:\t" + selectedMeasure(r.horizontalLine) + "\r" +
+            "Offset:\t" +
+                selectedMeasure(r.offsetGridHorizontal) + "\r\r" +
 
             "Grid Modules\r" +
             "Columns:\t" +
@@ -2287,6 +2279,14 @@ sold or otherwise used without prior written permission from the copyright holde
                 formatNumber(v.gridRatioVertical) + "\r" +
             "Grid Width:\t" + selectedMeasure(r.gridWidth) + "\r" +
             "Grid Height:\t" + selectedMeasure(r.gridHeight) + "\r" +
+            "Row Margin:\t" +
+                selectedMeasure(r.gridMarginVertical) + "\r" +
+            "Row Gutter:\t" +
+                selectedMeasure(r.gridGutterVertical) + "\r" +
+            "Column Margin:\t" +
+                selectedMeasure(r.gridMarginHorizontal) + "\r" +
+            "Column Gutter:\t" +
+                selectedMeasure(r.gridGutterHorizontal) + "\r" +
             "Module Area Width:\t" +
                 selectedMeasure(r.intersectionWidth) + "\r" +
             "Module Area Height:\t" +
@@ -2352,7 +2352,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 var tfp = frame.textFramePreferences;
 
                 // Text Frame Options > Baseline Options:
-                // First baseline follows the selected Row Offset Source.
+                // First baseline follows the selected Vertical Grid Align source.
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
                     r.offsetGridVertical * 2;
@@ -4231,57 +4231,41 @@ sold or otherwise used without prior written permission from the copyright holde
         "x-Height"
     ];
 
-    var pVertical = addSection(col2, "Row Grid");
-    var oVerticalLine = addRow(pVertical, "Row Leading", "", false, "mm");
-    var fVerticalGroup = addRow(pVertical, "Group", "6", true, "");
-    var oVerticalGridline =
-        addRow(pVertical, "Module Size", "", false, "mm");
-    var oVerticalOffset = addRow(pVertical, "Offset", "", false, "mm");
+    var pVertical = addSection(col2, "Vertical Grid");
     var rowOffsetSource =
         addSelectorRow(
             pVertical,
-            "Offset Source",
+            "Grid Align",
             OFFSET_SOURCE_NAMES,
             3
         );
-    var oGridMarginV =
-        addRow(pVertical, "Row Margin", "", false, "mm");
-    var oGutterV =
-        addRow(pVertical, "Row Gutter", "", false, "mm");
+    var fVerticalGroup = addRow(pVertical, "Grid Steps", "6", true, "");
+    var oVerticalGridline =
+        addRow(pVertical, "Grid Module Height", "", false, "mm");
+    var oVerticalLine = addRow(pVertical, "Gridline Every", "", false, "mm");
+    var oVerticalOffset = addRow(pVertical, "Offset", "", false, "mm");
 
     var majorGridHorizontalCheckbox =
-        pVertical.add("checkbox", undefined, "Row Grid Lines");
+        pVertical.add("checkbox", undefined, "Grid Guides");
     majorGridHorizontalCheckbox.value = false;
 
-    var guideRowsCheckbox =
-        pVertical.add("checkbox", undefined, "Row Gutter Guides");
-    guideRowsCheckbox.value = true;
-
-    var pHorizontal = addSection(col2, "Column Grid");
-    var oHorizontalLine = addRow(pHorizontal, "Column Leading", "", false, "mm");
-    var fHorizontalGroup = addRow(pHorizontal, "Group", "6", true, "");
-    var oHorizontalGridline =
-        addRow(pHorizontal, "Module Size", "", false, "mm");
-    var oHorizontalOffset = addRow(pHorizontal, "Offset", "", false, "mm");
+    var pHorizontal = addSection(col2, "Horizontal Grid");
     var columnOffsetSource =
         addSelectorRow(
             pHorizontal,
-            "Offset Source",
+            "Grid Align",
             OFFSET_SOURCE_NAMES,
             3
         );
-    var oGridMarginH =
-        addRow(pHorizontal, "Column Margin", "", false, "mm");
-    var oGutterH =
-        addRow(pHorizontal, "Column Gutter", "", false, "mm");
+    var fHorizontalGroup = addRow(pHorizontal, "Grid Steps", "6", true, "");
+    var oHorizontalGridline =
+        addRow(pHorizontal, "Grid Module Width", "", false, "mm");
+    var oHorizontalLine = addRow(pHorizontal, "Gridline Every", "", false, "mm");
+    var oHorizontalOffset = addRow(pHorizontal, "Offset", "", false, "mm");
 
     var majorGridVerticalCheckbox =
-        pHorizontal.add("checkbox", undefined, "Column Grid Lines");
+        pHorizontal.add("checkbox", undefined, "Grid Guides");
     majorGridVerticalCheckbox.value = false;
-
-    var guideColumnsCheckbox =
-        pHorizontal.add("checkbox", undefined, "Column Gutter Guides");
-    guideColumnsCheckbox.value = true;
 
     var pGridGroup = addSection(col2, "Grid Modules");
     var fGridGroupH = addRow(pGridGroup, "Columns", "6", true, "");
@@ -4297,6 +4281,20 @@ sold or otherwise used without prior written permission from the copyright holde
 
     var oGridWidth = addRow(pGridGroup, "Grid Width", "", false, "mm");
     var oGridHeight = addRow(pGridGroup, "Grid Height", "", false, "mm");
+    var oGridMarginV =
+        addRow(pGridGroup, "Row Margin", "", false, "mm");
+    var oGutterV =
+        addRow(pGridGroup, "Row Gutter", "", false, "mm");
+    var guideRowsCheckbox =
+        pGridGroup.add("checkbox", undefined, "Row Gutter Guides");
+    guideRowsCheckbox.value = true;
+    var oGridMarginH =
+        addRow(pGridGroup, "Column Margin", "", false, "mm");
+    var oGutterH =
+        addRow(pGridGroup, "Column Gutter", "", false, "mm");
+    var guideColumnsCheckbox =
+        pGridGroup.add("checkbox", undefined, "Column Gutter Guides");
+    guideColumnsCheckbox.value = true;
 
     var pModuleArea = addSection(col2, "Module Area");
     var oIntersectionW =
@@ -4304,11 +4302,17 @@ sold or otherwise used without prior written permission from the copyright holde
     var oIntersectionH =
         addRow(pModuleArea, "Height", "", false, "mm");
 
+    oVerticalLine.helpTip =
+        "The vertical grid interval used for row-based spacing.";
+    try { oVerticalLine.label.helpTip = oVerticalLine.helpTip; } catch (_) {}
+    oHorizontalLine.helpTip =
+        "The horizontal grid interval used for column-based spacing.";
+    try { oHorizontalLine.label.helpTip = oHorizontalLine.helpTip; } catch (_) {}
     oVerticalGridline.helpTip =
-        "Leading multiplied by Group; the height of one row module.";
+        "Gridline Every multiplied by Grid Steps; the height of one vertical grid module.";
     try { oVerticalGridline.label.helpTip = oVerticalGridline.helpTip; } catch (_) {}
     oHorizontalGridline.helpTip =
-        "Leading multiplied by Group; the width of one column module.";
+        "Gridline Every multiplied by Grid Steps; the width of one horizontal grid module.";
     try { oHorizontalGridline.label.helpTip = oHorizontalGridline.helpTip; } catch (_) {}
     // COLUMN 3 — PAGE + DOCUMENT OPTIONS
     var col3 = columns.add("group");
@@ -4339,7 +4343,7 @@ sold or otherwise used without prior written permission from the copyright holde
         );
     anamorphicFormat.value = false;
     anamorphicFormat.helpTip =
-        "Page Width and Height define Column and Row Leading.";
+        "Page Width and Height define the Horizontal and Vertical Gridline Every values.";
 
     var pPage = addSection(col3, "Page Size");
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
@@ -4358,9 +4362,9 @@ sold or otherwise used without prior written permission from the copyright holde
         "Keeps the current page width/height ratio when Custom Format is active.";
 
     oPageWidth.helpTip =
-        "Custom Format: Width derives Column Leading from the current horizontal page grid steps.";
+        "Custom Format: Width derives Horizontal Gridline Every from the current horizontal page grid steps.";
     oPageHeight.helpTip =
-        "Custom Format: Height derives Row Leading and type size from the current vertical page grid steps.";
+        "Custom Format: Height derives Vertical Gridline Every and type size from the current vertical page grid steps.";
     try { oPageWidth.label.helpTip = oPageWidth.helpTip; } catch (_) {}
     try { oPageHeight.label.helpTip = oPageHeight.helpTip; } catch (_) {}
 
@@ -9407,20 +9411,20 @@ sold or otherwise used without prior written permission from the copyright holde
         try {
             updateDynamicFieldLabel(
                 oVerticalLine.label,
-                "Row Leading"
+                "Gridline Every"
             );
             updateDynamicFieldLabel(
                 oHorizontalLine.label,
-                "Column Leading"
+                "Gridline Every"
             );
         } catch (_) {}
 
         try {
             oPageWidth.helpTip = enabled
-                ? "Editing Width changes Column Leading while preserving the current horizontal page grid steps."
+                ? "Editing Width changes the Horizontal Grid value “Gridline Every” while preserving the current horizontal page grid steps."
                 : "Choose Custom Format in Emetric Mode to edit Width.";
             oPageHeight.helpTip = enabled
-                ? "Editing Height changes Row Leading while preserving the current vertical page grid steps."
+                ? "Editing Height changes the Vertical Grid value “Gridline Every” while preserving the current vertical page grid steps."
                 : "Choose Custom Format in Emetric Mode to edit Height.";
             lockFormatRatio.helpTip = enabled
                 ? "Keeps the current page width/height ratio when either dimension is edited."
@@ -9562,15 +9566,15 @@ sold or otherwise used without prior written permission from the copyright holde
                         currentResult.pageWidth;
 
                     // Locked ratio means Width also derives a new Height,
-                    // which changes Row Leading.
+                    // which changes Vertical Gridline Every.
                     exactLineSpaceMM = null;
                 }
             } else {
                 exactPageHeightMM =
                     targetDimensionMM;
 
-                // Page Height changes Leading through the unchanged Row Grid
-                // Group. It supersedes an explicitly edited Leading value.
+                // Page Height changes Gridline Every through the unchanged Vertical Grid
+                // Grid Steps. It supersedes an explicitly edited Leading value.
                 exactLineSpaceMM = null;
 
                 if (lockRatio) {

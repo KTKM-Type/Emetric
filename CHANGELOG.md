@@ -6,6 +6,17 @@ The project uses [Semantic Versioning](https://semver.org/) with prerelease iden
 
 ## [Unreleased]
 
+## [0.42.0-alpha.11] — 2026-07-15
+
+### Changed
+
+- Renamed **Row Grid** to **Vertical Grid** and **Column Grid** to **Horizontal Grid**.
+- Renamed grid controls: **Group** to **Grid Steps**, **Offset Source** to **Grid Align**, and **Row/Column Grid Lines** to **Grid Guides**.
+- Renamed **Row Leading** and **Column Leading** to **Gridline Every** in the Vertical and Horizontal Grid sections.
+- Renamed **Module Size** to **Grid Module Height** in Vertical Grid and **Grid Module Width** in Horizontal Grid.
+- Reordered Vertical and Horizontal Grid controls as Grid Align, Grid Steps, Grid Module Height/Width, and Gridline Every.
+- Moved Row Margin, Row Gutter, Row Gutter Guides, Column Margin, Column Gutter, and Column Gutter Guides to **Grid Modules**.
+
 ## [0.42.0-alpha.10] — 2026-07-15
 
 ### Changed
