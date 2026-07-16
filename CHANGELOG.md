@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.0-alpha.27
+
+- Bound **Vertical Grid → Alignment → Ascender** explicitly to the visible **Type Size → Ascender** value.
+- Reused that same Type Size alignment measure for baseline grid start, Placeholder Text first baseline, Emetric Data text frame baseline, and the basic text-frame default.
+- Kept horizontal guide alignment and Page Size preset behavior from alpha.26.
+
 ## 0.42.0-alpha.26
 
 - Fixed Ascender alignment for horizontal grid-row guides so the guide structure aligns with the document grid/glyph-top origin.

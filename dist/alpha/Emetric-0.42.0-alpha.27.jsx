@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.26, 2026
+Version 0.42.0-alpha.27, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.26";
+    var VERSION = "0.42.0-alpha.27";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1600,7 +1600,10 @@ sold or otherwise used without prior written permission from the copyright holde
         var descender = metrics * typeRatios.descender;
         var lineSpace = verticalLine;
 
-        function offsetSourceValue(sourceIndex) {
+        function typeSizeMeasureForAlignment(sourceIndex) {
+            // Keep grid alignment tied to the visible Type Size values.
+            // Ascender alignment must use Type Size > Ascender explicitly,
+            // not a separately measured or inferred font value.
             var value = lowercase;
 
             if (sourceIndex === 0) {
@@ -1616,10 +1619,15 @@ sold or otherwise used without prior written permission from the copyright holde
             return Math.abs(value);
         }
 
+        var verticalAlignmentMeasure =
+            typeSizeMeasureForAlignment(v.rowOffsetSourceIndex);
+        var horizontalAlignmentMeasure =
+            typeSizeMeasureForAlignment(v.columnOffsetSourceIndex);
+
         var offsetGridVertical =
-            offsetSourceValue(v.rowOffsetSourceIndex) / 2;
+            verticalAlignmentMeasure / 2;
         var offsetGridHorizontal =
-            offsetSourceValue(v.columnOffsetSourceIndex) / 2;
+            horizontalAlignmentMeasure / 2;
 
         // GRID MARGIN
         // Horizontal values follow Horizontal Grid Interval; vertical values follow
@@ -1709,10 +1717,12 @@ sold or otherwise used without prior written permission from the copyright holde
 
             verticalLine: verticalLine,
             verticalGridline: verticalGridline,
+            verticalAlignmentMeasure: verticalAlignmentMeasure,
             offsetGridVertical: offsetGridVertical,
 
             horizontalLine: horizontalLine,
             horizontalGridline: horizontalGridline,
+            horizontalAlignmentMeasure: horizontalAlignmentMeasure,
             offsetGridHorizontal: offsetGridHorizontal,
 
             gridMarginHorizontal: gridMarginHorizontal,
@@ -2365,7 +2375,8 @@ sold or otherwise used without prior written permission from the copyright holde
         // equals two times the calculated Row Offset.
         try {
             gp.baselineDivision = r.lineSpace;
-            gp.baselineStart = r.offsetGridVertical * 2;
+            gp.baselineStart =
+                scriptNumber(r.verticalAlignmentMeasure) + " mm";
             gp.baselineGridShown = true;
             gp.baselineColor = baselineGridColor;
         } catch (_) {}
@@ -2466,7 +2477,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
                     exportPointValue(
-                        r.offsetGridVertical * 2,
+                        r.verticalAlignmentMeasure,
                         options.unitIndex
                     );
             } catch (_) {}
@@ -2558,7 +2569,7 @@ sold or otherwise used without prior written permission from the copyright holde
             "Document Grid Start:\t−" +
                 selectedMeasure(r.offsetGridVertical) + "\r" +
             "Baseline Start:\t" +
-                selectedMeasure(r.offsetGridVertical * 2) +
+                selectedMeasure(r.verticalAlignmentMeasure) +
                 " from Top Margin\r\r" +
 
             "Vertical Grid\r" +
@@ -2673,7 +2684,10 @@ sold or otherwise used without prior written permission from the copyright holde
                 // First baseline follows the selected Vertical Alignment source.
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
-                    r.offsetGridVertical * 2;
+                    exportPointValue(
+                        r.verticalAlignmentMeasure,
+                        options.unitIndex
+                    );
 
                 // Restore all inset spacing to zero.
                 tfp.insetSpacing = [0, 0, 0, 0];
@@ -3139,7 +3153,7 @@ sold or otherwise used without prior written permission from the copyright holde
                         FirstBaseline.FIXED_HEIGHT;
                     tfp.minimumFirstBaselineOffset =
                         exportPointValue(
-                            r.offsetGridVertical * 2,
+                            r.verticalAlignmentMeasure,
                             options.unitIndex
                         );
                 } catch (_) {}
