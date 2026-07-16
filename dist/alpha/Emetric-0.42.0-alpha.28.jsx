@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.27, 2026
+Version 0.42.0-alpha.28, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.27";
+    var VERSION = "0.42.0-alpha.28";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -8139,6 +8139,121 @@ sold or otherwise used without prior written permission from the copyright holde
         return bottom;
     }
 
+    function outlineTop(pageItem) {
+        var top = null;
+
+        try {
+            var bounds = pageItem.geometricBounds;
+            top = Number(bounds[0]);
+        } catch (_) {}
+
+        try {
+            if (pageItem.pageItems && pageItem.pageItems.length > 0) {
+                for (var i = 0; i < pageItem.pageItems.length; i++) {
+                    var childTop =
+                        outlineTop(pageItem.pageItems[i]);
+
+                    if (
+                        childTop !== null &&
+                        (top === null || childTop < top)
+                    ) {
+                        top = childTop;
+                    }
+                }
+            }
+        } catch (_) {}
+
+        return top;
+    }
+
+    function measureVisualAscender(doc, record) {
+        var frame = createMetricFrame(
+            doc,
+            "bdhkl",
+            record,
+            FirstBaseline.FIXED_HEIGHT
+        );
+
+        var baseline = null;
+        var outlines = null;
+
+        try {
+            // Use a fixed baseline far enough down to make the outline top
+            // measurable. The returned value is the visual distance from the
+            // baseline to lowercase ascender stems, not InDesign's abstract
+            // font ascent or line-box ascent.
+            frame.textFramePreferences.minimumFirstBaselineOffset = 100;
+            try { frame.parentStory.recompose(); } catch (_) {}
+            try { doc.recompose(); } catch (_) {}
+
+            baseline = Number(frame.lines[0].baseline);
+
+            try {
+                outlines = frame.texts[0].createOutlines(false);
+            } catch (_) {
+                try {
+                    outlines = frame.parentStory.createOutlines(false);
+                } catch (__) {
+                    outlines = null;
+                }
+            }
+
+            if (!outlines) {
+                throw new Error(
+                    "InDesign could not create temporary outlines " +
+                    "for the ascender measurement."
+                );
+            }
+
+            if (!(outlines instanceof Array)) {
+                outlines = [outlines];
+            }
+
+            var highestTop = null;
+
+            for (var i = 0; i < outlines.length; i++) {
+                var top = outlineTop(outlines[i]);
+
+                if (
+                    top !== null &&
+                    (highestTop === null || top < highestTop)
+                ) {
+                    highestTop = top;
+                }
+            }
+
+            if (highestTop === null) {
+                throw new Error(
+                    "InDesign could not measure the outlined ascenders."
+                );
+            }
+
+            var ascender = baseline - highestTop;
+
+            if (!(ascender > 0)) {
+                throw new Error(
+                    "The measured ascender was not above the baseline."
+                );
+            }
+
+            return ascender;
+        } finally {
+            if (outlines) {
+                try {
+                    if (!(outlines instanceof Array)) {
+                        outlines = [outlines];
+                    }
+
+                    for (var j = outlines.length - 1; j >= 0; j--) {
+                        try { outlines[j].remove(); } catch (_) {}
+                    }
+                } catch (_) {}
+            }
+
+            try { frame.remove(); } catch (_) {}
+        }
+    }
+
     function measureDescender(doc, record) {
         var frame = createMetricFrame(
             doc,
@@ -8833,12 +8948,20 @@ sold or otherwise used without prior written permission from the copyright holde
                 doc.documentPreferences.pageHeight = 200;
             } catch (_) {}
 
-            var ascent = measureFirstBaselineMetric(
-                doc,
-                record,
-                FirstBaseline.ASCENT_OFFSET,
-                "Hdx"
-            );
+            var ascent = null;
+
+            try {
+                ascent = measureVisualAscender(doc, record);
+            } catch (_) {
+                // Fallback to InDesign's own ascent option when outline
+                // measurement is unavailable for a specific font.
+                ascent = measureFirstBaselineMetric(
+                    doc,
+                    record,
+                    FirstBaseline.ASCENT_OFFSET,
+                    "Hdx"
+                );
+            }
 
             var capHeight = measureFirstBaselineMetric(
                 doc,
@@ -8860,6 +8983,8 @@ sold or otherwise used without prior written permission from the copyright holde
 
             return {
                 // InDesign's temporary metric sample is measured at 100 pt.
+                // Ascender uses temporary outlines of lowercase ascender stems,
+                // so Ascender alignment follows the visible upstroke top.
                 unitsPerEm: 100,
                 // The font's native design-space UPM, read from the OpenType
                 // head table when the source file is accessible.

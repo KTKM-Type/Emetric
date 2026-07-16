@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.0-alpha.28
+
+- Changed Ascender alignment to measure the visible lowercase ascender stems from temporary outlines.
+- Kept Type Size → Ascender as the displayed alignment value, but made the measured ascender reflect the actual upstroke top.
+- Falls back to InDesign’s ascent metric if outline measurement is unavailable for a specific font.
+
 ## 0.42.0-alpha.27
 
 - Bound **Vertical Grid → Alignment → Ascender** explicitly to the visible **Type Size → Ascender** value.
