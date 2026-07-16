@@ -1,3 +1,5 @@
+![Emetric]([https://github.com/Dicotype/Afacad/blob/main/documents/artwork/afacad_01_artwork.png](https://github.com/KTKM-Type/Emetric/edit/main/docs/img/emetric-full.png/)
+
 # Emetric
 
 A typographic proportioning tool for creating type-based document grids, margins, and modular layouts in Adobe InDesign.
