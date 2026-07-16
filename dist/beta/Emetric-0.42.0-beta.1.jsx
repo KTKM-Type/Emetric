@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.32, 2026
+Version 0.42.0-beta.1, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,8 +25,8 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.32";
-    var RELEASE_STATUS = "ALPHA";
+    var VERSION = "0.42.0-beta.1";
+    var RELEASE_STATUS = "BETA";
     var SCRIPT_NAME =
         APP_NAME +
         " v" +
