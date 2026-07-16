@@ -1,4 +1,4 @@
-![Emetric]([https://github.com/Dicotype/Afacad/blob/main/documents/artwork/afacad_01_artwork.png](https://github.com/KTKM-Type/Emetric/edit/main/docs/img/emetric-full.png/)
+![Emetric][https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png]
 
 # Emetric
 
