@@ -6,7 +6,9 @@ Emetric translates typographic proportions into document geometry. It can derive
 
 > **Status:** Beta — current source version `0.42.0-beta.1`
 
-![Emetric](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png)
+![Emetric Full](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png)
+
+![Emetric Compact](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-compact.png)
 
 ## Main features
 
