@@ -1,4 +1,12 @@
 # Changelog
+
+## 0.42.0-alpha.25
+
+- Added a **Format** selector at the top of **Page Size**.
+- The selector reads InDesign document presets when available and includes common standard fallback formats such as A4, A3, Letter, Legal and Tabloid.
+- Selecting a format updates **Width** and **Height** and switches to **Custom Format**.
+- Added tooltip coverage for the new Page Size Format selector and its items.
+
 ## 0.42.0-alpha.24
 
 - Scaled the selected font for Placeholder Text / [Basic Paragraph] when Metric Source is **Emetric Decimal**, **Emetric Dozenal**, or **Custom Metric**.

@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.24, 2026
+Version 0.42.0-alpha.25, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.24";
+    var VERSION = "0.42.0-alpha.25";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -573,6 +573,33 @@ sold or otherwise used without prior written permission from the copyright holde
     ];
 
     var currentUnitIndex = 0;
+
+    var PAGE_SIZE_PRESET_FALLBACKS = [
+        { name: "A0", widthMM: 841, heightMM: 1189 },
+        { name: "A1", widthMM: 594, heightMM: 841 },
+        { name: "A2", widthMM: 420, heightMM: 594 },
+        { name: "A3", widthMM: 297, heightMM: 420 },
+        { name: "A4", widthMM: 210, heightMM: 297 },
+        { name: "A5", widthMM: 148, heightMM: 210 },
+        { name: "A6", widthMM: 105, heightMM: 148 },
+        { name: "B0", widthMM: 1000, heightMM: 1414 },
+        { name: "B1", widthMM: 707, heightMM: 1000 },
+        { name: "B2", widthMM: 500, heightMM: 707 },
+        { name: "B3", widthMM: 353, heightMM: 500 },
+        { name: "B4", widthMM: 250, heightMM: 353 },
+        { name: "B5", widthMM: 176, heightMM: 250 },
+        { name: "B6", widthMM: 125, heightMM: 176 },
+        { name: "Letter", widthMM: 215.9, heightMM: 279.4 },
+        { name: "Legal", widthMM: 215.9, heightMM: 355.6 },
+        { name: "Tabloid", widthMM: 279.4, heightMM: 431.8 },
+        { name: "Ledger", widthMM: 431.8, heightMM: 279.4 },
+        { name: "Executive", widthMM: 184.15, heightMM: 266.7 },
+        { name: "Half Letter", widthMM: 139.7, heightMM: 215.9 },
+        { name: "DL Envelope", widthMM: 99, heightMM: 210 },
+        { name: "C4 Envelope", widthMM: 229, heightMM: 324 },
+        { name: "C5 Envelope", widthMM: 162, heightMM: 229 },
+        { name: "C6 Envelope", widthMM: 114, heightMM: 162 }
+    ];
 
     function unitToMM(value, unitIndex) {
         if (unitIndex === 5) {
@@ -1188,6 +1215,163 @@ sold or otherwise used without prior written permission from the copyright holde
         return formatNumber(value) + " mm";
     }
 
+    function parsePresetDimensionMM(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        if (typeof value === "number") {
+            return Number(value);
+        }
+
+        var text = String(value)
+            .replace(",", ".")
+            .replace(/^\s+|\s+$/g, "");
+
+        if (!text) {
+            return null;
+        }
+
+        var numeric = parseFloat(text);
+        if (!(numeric > 0)) {
+            return null;
+        }
+
+        if (/pt$/i.test(text)) {
+            return numeric / MM_TO_PT;
+        }
+
+        if (/in$/i.test(text)) {
+            return numeric * 25.4;
+        }
+
+        return numeric;
+    }
+
+    function pageSizePresetKey(name, widthMM, heightMM) {
+        return (
+            String(name || "")
+                .toLowerCase()
+                .replace(/^\s+|\s+$/g, "") +
+            "|" +
+            String(Math.round(Number(widthMM || 0) * 10) / 10) +
+            "x" +
+            String(Math.round(Number(heightMM || 0) * 10) / 10)
+        );
+    }
+
+    function addPageSizePreset(list, keys, name, widthMM, heightMM, source) {
+        var w = Number(widthMM);
+        var h = Number(heightMM);
+
+        if (!(w > 0) || !(h > 0)) {
+            return;
+        }
+
+        var key = pageSizePresetKey(name, w, h);
+        if (keys[key]) {
+            return;
+        }
+
+        keys[key] = true;
+        list.push({
+            name: String(name || "Untitled"),
+            widthMM: w,
+            heightMM: h,
+            source: source || "fallback"
+        });
+    }
+
+    function collectPageSizePresets() {
+        var list = [
+            {
+                name: "Custom",
+                widthMM: null,
+                heightMM: null,
+                source: "custom"
+            }
+        ];
+        var keys = {};
+        var oldUnit = null;
+
+        try {
+            oldUnit = app.scriptPreferences.measurementUnit;
+            app.scriptPreferences.measurementUnit =
+                MeasurementUnits.MILLIMETERS;
+        } catch (_) {}
+
+        try {
+            var documentPresets = app.documentPresets;
+            for (var i = 0; i < documentPresets.length; i++) {
+                var preset = documentPresets[i];
+                var presetName = String(preset.name || "");
+                var widthMM = parsePresetDimensionMM(preset.pageWidth);
+                var heightMM = parsePresetDimensionMM(preset.pageHeight);
+
+                addPageSizePreset(
+                    list,
+                    keys,
+                    presetName,
+                    widthMM,
+                    heightMM,
+                    "indesign"
+                );
+            }
+        } catch (_) {}
+
+        try {
+            if (oldUnit !== null && oldUnit !== undefined) {
+                app.scriptPreferences.measurementUnit = oldUnit;
+            }
+        } catch (_) {}
+
+        for (var fallbackIndex = 0;
+             fallbackIndex < PAGE_SIZE_PRESET_FALLBACKS.length;
+             fallbackIndex++) {
+            var fallback = PAGE_SIZE_PRESET_FALLBACKS[fallbackIndex];
+            addPageSizePreset(
+                list,
+                keys,
+                fallback.name,
+                fallback.widthMM,
+                fallback.heightMM,
+                "standard"
+            );
+        }
+
+        return list;
+    }
+
+    function pageSizePresetLabels(presets) {
+        var labels = [];
+
+        for (var i = 0; i < presets.length; i++) {
+            labels.push(presets[i].name);
+        }
+
+        return labels;
+    }
+
+    function matchingPageSizePresetIndex(presets, widthMM, heightMM) {
+        var tolerance = 0.1;
+
+        if (!(widthMM > 0) || !(heightMM > 0)) {
+            return 0;
+        }
+
+        for (var i = 1; i < presets.length; i++) {
+            var preset = presets[i];
+            if (
+                Math.abs(preset.widthMM - widthMM) <= tolerance &&
+                Math.abs(preset.heightMM - heightMM) <= tolerance
+            ) {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
     function toPoints(mm) {
         return mm * MM_TO_PT;
     }
@@ -1737,12 +1921,16 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var d = g.add("dropdownlist", undefined, items);
         d.preferredSize.width = UI_FIELD_WIDTH * 2 + 8;
+        d.minimumSize.width = UI_FIELD_WIDTH * 2 + 8;
+        d.maximumSize.width = UI_FIELD_WIDTH * 2 + 8;
         d.selection = selectedIndex || 0;
 
         var dropdownUnitSpacer = g.add("statictext", undefined, "");
         dropdownUnitSpacer.preferredSize.width = UI_UNIT_WIDTH;
         dropdownUnitSpacer.minimumSize.width = UI_UNIT_WIDTH;
         dropdownUnitSpacer.maximumSize.width = UI_UNIT_WIDTH;
+        d.label = l;
+        d.unitLabel = dropdownUnitSpacer;
 
         return d;
     }
@@ -4611,7 +4799,26 @@ sold or otherwise used without prior written permission from the copyright holde
     col3.minimumSize.width = UI_COLUMN_WIDTH;
     col3.maximumSize.width = UI_COLUMN_WIDTH;
 
+    var PAGE_SIZE_PRESETS = collectPageSizePresets();
+
     var pPage = addSection(col3, "Page Size");
+    var pageSizePresetDropdown =
+        addDropdownRow(
+            pPage,
+            "Format",
+            pageSizePresetLabels(PAGE_SIZE_PRESETS),
+            0
+        );
+    for (var pageSizePresetItemIndex = 0;
+         pageSizePresetItemIndex < pageSizePresetDropdown.items.length;
+         pageSizePresetItemIndex++) {
+        try {
+            pageSizePresetDropdown.items[pageSizePresetItemIndex]
+                .emetricPageSizePreset =
+                PAGE_SIZE_PRESETS[pageSizePresetItemIndex];
+        } catch (_) {}
+    }
+
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
     var oFormatRatio =
@@ -4623,6 +4830,13 @@ sold or otherwise used without prior written permission from the copyright holde
     lockFormatRatio.enabled = false;
     lockFormatRatio.helpTip =
         "Keeps the current page width/height ratio when Custom Format is active.";
+
+    pageSizePresetDropdown.helpTip =
+        "Choose a standard InDesign page format to update Width and Height.";
+    try {
+        pageSizePresetDropdown.label.helpTip =
+            pageSizePresetDropdown.helpTip;
+    } catch (_) {}
 
     oPageWidth.helpTip =
         "Custom Format: Width derives Horizontal Grid Interval from the current horizontal page grid steps.";
@@ -9543,6 +9757,79 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
+    var pageSizePresetIsUpdating = false;
+
+    function selectedPageSizePreset() {
+        try {
+            if (
+                pageSizePresetDropdown.selection &&
+                pageSizePresetDropdown.selection.emetricPageSizePreset
+            ) {
+                return pageSizePresetDropdown
+                    .selection
+                    .emetricPageSizePreset;
+            }
+        } catch (_) {}
+
+        return null;
+    }
+
+    function syncPageSizePresetDropdown() {
+        if (!currentResult) {
+            return;
+        }
+
+        pageSizePresetIsUpdating = true;
+
+        try {
+            pageSizePresetDropdown.selection =
+                matchingPageSizePresetIndex(
+                    PAGE_SIZE_PRESETS,
+                    currentResult.pageWidth,
+                    currentResult.pageHeight
+                );
+        } catch (_) {}
+
+        pageSizePresetIsUpdating = false;
+    }
+
+    function applyPageSizePresetSelection() {
+        if (pageSizePresetIsUpdating) {
+            return;
+        }
+
+        var preset = selectedPageSizePreset();
+
+        if (
+            !preset ||
+            preset.source === "custom" ||
+            !(preset.widthMM > 0) ||
+            !(preset.heightMM > 0)
+        ) {
+            return;
+        }
+
+        setDiagnosticAction(
+            "Apply Page Size Preset: " + preset.name,
+            true
+        );
+
+        try {
+            typeLedFormat.value = false;
+            anamorphicFormat.value = true;
+        } catch (_) {}
+
+        exactPageWidthMM = Number(preset.widthMM);
+        exactPageHeightMM = Number(preset.heightMM);
+        exactLineSpaceMM = null;
+
+        updateAnamorphicFormatControls();
+        update();
+        syncCompactControls();
+        markDirty();
+        updatePreviewDocument();
+    }
+
     function readValues() {
         return {
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
@@ -9639,6 +9926,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
             setMeasureField(oPageWidth, currentResult.pageWidth);
             setMeasureField(oPageHeight, currentResult.pageHeight);
+            syncPageSizePresetDropdown();
             setField(oFormatRatio.a, currentResult.formatRatioHorizontal);
             setField(oFormatRatio.b, currentResult.formatRatioVertical);
 
@@ -9763,6 +10051,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         try { typeLedFormat.value = !enabled; } catch (_) {}
         try { anamorphicFormat.value = enabled; } catch (_) {}
+        try { pageSizePresetDropdown.enabled = true; } catch (_) {}
         try { oPageWidth.enabled = enabled; } catch (_) {}
         try { oPageHeight.enabled = enabled; } catch (_) {}
         try { oFormatRatio.a.enabled = enabled; } catch (_) {}
@@ -9789,6 +10078,8 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
 
         try {
+            pageSizePresetDropdown.helpTip =
+                "Choose a standard InDesign page format to update Width and Height. Selecting a format switches to Custom Format.";
             oPageWidth.helpTip = enabled
                 ? "Editing Width changes the Horizontal Grid value “Grid Interval” while preserving the current horizontal page grid steps."
                 : "Choose Custom Format in Emetric Mode to edit Width.";
@@ -10018,6 +10309,10 @@ sold or otherwise used without prior written permission from the copyright holde
             };
         })(pageDimensionFields[pageDimensionIndex]);
     }
+
+    pageSizePresetDropdown.onChange = function () {
+        applyPageSizePresetSelection();
+    };
 
     function isPageRatioField(field) {
         return (
@@ -11537,6 +11832,29 @@ sold or otherwise used without prior written permission from the copyright holde
 
         // Page and areas
         setTooltip(pPage, "Set or review the page dimensions and page ratio.");
+        setFieldTooltip(pageSizePresetDropdown, "Choose a standard InDesign page format to update Width and Height. Selecting a format switches to Custom Format.");
+        try {
+            for (var psi = 0; psi < pageSizePresetDropdown.items.length; psi++) {
+                var ps = pageSizePresetDropdown.items[psi].emetricPageSizePreset;
+                if (ps && ps.source !== "custom") {
+                    setTooltip(
+                        pageSizePresetDropdown.items[psi],
+                        "Set Page Size to " +
+                            ps.name +
+                            " (" +
+                            mmString(ps.widthMM) +
+                            " × " +
+                            mmString(ps.heightMM) +
+                            ")."
+                    );
+                } else {
+                    setTooltip(
+                        pageSizePresetDropdown.items[psi],
+                        "Keep the current custom Width and Height."
+                    );
+                }
+            }
+        } catch (_) {}
         setFieldTooltip(oPageWidth, activeAnamorphicMode()
             ? "Editing Width changes the Horizontal Grid Interval while preserving the current horizontal page grid steps."
             : "Choose Custom Format in Emetric Mode to edit Width.");
