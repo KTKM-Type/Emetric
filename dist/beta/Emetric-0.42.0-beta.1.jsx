@@ -14,8 +14,8 @@ Copyright © 2012–2026 by Kristian Möller, KTKM. All rights reserved.
 
 This software, including its source code, design, documentation and associated
 materials, is the exclusive property of Kristian Möller / KTKM Design AB.
-No part of the software may be copied, modified, distributed, sublicensed,
-sold or otherwise used without prior written permission from the copyright holder.
+This beta is distributed under the Emetric Beta License. See LICENSE.md.
+Commercial licensing may be introduced for future stable releases.
 */
 
 (function () {
