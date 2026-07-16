@@ -1,11 +1,12 @@
 # Changelog
 
-## 0.42.0-alpha.31
+## 0.42.0-alpha.32
 
-- Strengthened Colors panel label alignment after switching Metric Source.
-- Fixed-width label text controls now keep right alignment even when ScriptUI recalculates wrapper groups during Custom Metric expand/collapse.
-- Reapplied fixed row geometry for Color Theme, Guides, Margins, Columns, Baseline Grid, and Document Grid.
-- Preserved HEX input and swatch preview widths during Metric Source layout updates.
+- Changed **Custom Metric** to use the existing **Type Size** fields as manual metric values instead of expanding a separate Custom Metric field group.
+- Type Size values are independent in Custom Metric: editing Metrics, Ascender, Cap Height, x-Height, or Descender no longer recalculates the other Type Size fields.
+- **Vertical Grid → Alignment** now reads the corresponding Type Size value directly when Custom Metric is selected; for example, Ascender alignment uses **Type Size → Ascender** as the first-baseline offset from the top margin.
+- Custom Format no longer overwrites manual Type Size values when Custom Metric is selected.
+- Removing the Custom Metric expand/collapse flow should reduce ScriptUI reflow issues in the Colors panel.
 
 ## 0.42.0-alpha.29
 

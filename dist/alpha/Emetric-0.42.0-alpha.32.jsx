@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.31, 2026
+Version 0.42.0-alpha.32, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.31";
+    var VERSION = "0.42.0-alpha.32";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1593,12 +1593,17 @@ sold or otherwise used without prior written permission from the copyright holde
                 pageHeightOverride /
                 verticalStepCount;
 
-            // Type size follows Vertical Grid Interval through the existing
-            // Metrics/Leading ratio.
-            metrics =
-                verticalLine *
-                v.metricsRatio /
-                v.lineRatio;
+            // In Custom Metric the visible Type Size fields are manual metric
+            // sources. Custom Format may change the grid interval/page size,
+            // but it must not overwrite the user-entered Type Size values.
+            if (!v.manualTypeSize) {
+                // Type size follows Vertical Grid Interval through the existing
+                // Metrics/Leading ratio.
+                metrics =
+                    verticalLine *
+                    v.metricsRatio /
+                    v.lineRatio;
+            }
         }
 
         positive(metrics, "Metrics");
@@ -6440,6 +6445,14 @@ sold or otherwise used without prior written permission from the copyright holde
             typeSize: {
                 metrics:
                     String(fMetrics.text),
+                ascender:
+                    String(oAscender.text),
+                capHeight:
+                    String(oUppercase.text),
+                xHeight:
+                    String(oLowercase.text),
+                descender:
+                    String(oDescender.text),
                 ratioMetrics:
                     String(
                         fMetricsLine.a.text
@@ -6909,13 +6922,10 @@ sold or otherwise used without prior written permission from the copyright holde
                 selectedFontMetrics = null;
                 setFontControlsEnabled(false);
                 setCustomRatioControlsEnabled(
-                    true
-                );
-                setTypeRatios(
-                    customRatiosFromFields()
+                    false
                 );
                 fontMetricsStatus.text =
-                    "Using Custom Metric";
+                    "Using Custom Metric from Type Size";
             } else {
                 activateEmetricSource(
                     sourceKey
@@ -6935,6 +6945,41 @@ sold or otherwise used without prior written permission from the copyright holde
                             currentUnitIndex
                         )
                 );
+            oAscender.text =
+                String(
+                    typeSize.ascender !==
+                        undefined
+                        ? typeSize.ascender
+                        : oAscender.text
+                );
+            oUppercase.text =
+                String(
+                    typeSize.capHeight !==
+                        undefined
+                        ? typeSize.capHeight
+                        : oUppercase.text
+                );
+            oLowercase.text =
+                String(
+                    typeSize.xHeight !==
+                        undefined
+                        ? typeSize.xHeight
+                        : oLowercase.text
+                );
+            oDescender.text =
+                String(
+                    typeSize.descender !==
+                        undefined
+                        ? typeSize.descender
+                        : oDescender.text
+                );
+            if (sourceKey === "custom") {
+                try {
+                    setTypeRatios(
+                        customTypeRatiosFromTypeSizeFields()
+                    );
+                } catch (_) {}
+            }
             fMetricsLine.a.text =
                 String(
                     typeSize.ratioMetrics !==
@@ -9495,24 +9540,16 @@ sold or otherwise used without prior written permission from the copyright holde
     }
 
     function setCustomRatiosExpanded(expanded) {
-        customRatiosExpanded = Boolean(expanded);
+        // Custom Metric no longer expands a separate field group.
+        // It uses the visible Type Size fields as manual metric values.
+        customRatiosExpanded = false;
 
         try {
-            if (customRatiosExpanded) {
-                customRatioContainer.visible = true;
-                customRatioContainer.minimumSize.height = 0;
-                customRatioContainer.maximumSize.height = 10000;
-                customRatioContainer.preferredSize.height = -1;
-            } else {
-                customRatioContainer.visible = false;
-                customRatioContainer.minimumSize.height = 0;
-                customRatioContainer.maximumSize.height = 0;
-                customRatioContainer.preferredSize.height = 0;
-            }
+            customRatioContainer.visible = false;
+            customRatioContainer.minimumSize.height = 0;
+            customRatioContainer.maximumSize.height = 0;
+            customRatioContainer.preferredSize.height = 0;
         } catch (_) {}
-
-        layoutMainWindow();
-        scheduleDeferredColorHexRefresh();
     }
 
     function setCustomRatioControlsEnabled(enabled) {
@@ -9526,14 +9563,11 @@ sold or otherwise used without prior written permission from the copyright holde
 
         for (var i = 0; i < controls.length; i++) {
             try {
-                controls[i].enabled =
-                    Boolean(enabled);
+                controls[i].enabled = false;
             } catch (_) {}
         }
 
-        // Custom Metric fields are shown automatically while the source
-        // is selected and hidden for every other metric source.
-        setCustomRatiosExpanded(Boolean(enabled));
+        setCustomRatiosExpanded(false);
     }
 
     function customRatiosFromFields() {
@@ -9556,6 +9590,99 @@ sold or otherwise used without prior written permission from the copyright holde
                 parseNumber(customRatioDescender.text, -3) /
                 metricsBase
         };
+    }
+
+
+    function typeSizeFieldValueMM(field, fallbackMM) {
+        var fallbackValueMM = Number(fallbackMM);
+
+        if (!isFinite(fallbackValueMM)) {
+            fallbackValueMM = 0;
+        }
+
+        return unitToMM(
+            parseMeasureInput(
+                field.text,
+                currentUnitIndex,
+                mmToUnit(
+                    fallbackValueMM,
+                    currentUnitIndex
+                )
+            ),
+            currentUnitIndex
+        );
+    }
+
+    function customTypeSizeFallbackMetricsMM() {
+        if (
+            currentResult &&
+            currentResult.metrics > 0
+        ) {
+            return currentResult.metrics;
+        }
+
+        return unitToMM(4, currentUnitIndex);
+    }
+
+    function customTypeSizeValuesFromFields() {
+        var fallbackMetricsMM =
+            customTypeSizeFallbackMetricsMM();
+
+        var metricsMM = Math.abs(
+            typeSizeFieldValueMM(
+                fMetrics,
+                fallbackMetricsMM
+            )
+        );
+
+        if (!(metricsMM > 0)) {
+            metricsMM = fallbackMetricsMM;
+        }
+
+        var fallbackRatios =
+            activeTypeRatios || DEFAULT_TYPE_RATIOS;
+
+        return {
+            metrics: metricsMM,
+            ascender: typeSizeFieldValueMM(
+                oAscender,
+                metricsMM * fallbackRatios.ascender
+            ),
+            capHeight: typeSizeFieldValueMM(
+                oUppercase,
+                metricsMM * fallbackRatios.capHeight
+            ),
+            xHeight: typeSizeFieldValueMM(
+                oLowercase,
+                metricsMM * fallbackRatios.xHeight
+            ),
+            descender: typeSizeFieldValueMM(
+                oDescender,
+                metricsMM * fallbackRatios.descender
+            )
+        };
+    }
+
+    function customTypeRatiosFromTypeSizeFields() {
+        var values = customTypeSizeValuesFromFields();
+        var metricsMM = values.metrics;
+
+        positive(metricsMM, "Type Size – Metrics");
+
+        return {
+            ascender: values.ascender / metricsMM,
+            capHeight: values.capHeight / metricsMM,
+            xHeight: values.xHeight / metricsMM,
+            descender: values.descender / metricsMM
+        };
+    }
+
+    function selectedTypeRatiosForCalculation() {
+        if (selectedMetricSourceKey() === "custom") {
+            return customTypeRatiosFromTypeSizeFields();
+        }
+
+        return activeTypeRatios;
     }
 
     function roundFontDesignUnit(value) {
@@ -9690,11 +9817,12 @@ sold or otherwise used without prior written permission from the copyright holde
     function activateCustomRatios() {
         selectedFontMetrics = null;
         setFontControlsEnabled(false);
-        setCustomRatioControlsEnabled(true);
+        setCustomRatioControlsEnabled(false);
 
         try {
-            setTypeRatios(customRatiosFromFields());
-            fontMetricsStatus.text = "Using Custom Metric";
+            setTypeRatios(customTypeRatiosFromTypeSizeFields());
+            fontMetricsStatus.text =
+                "Using Custom Metric from Type Size";
         } catch (_) {}
 
         update();
@@ -9840,9 +9968,6 @@ sold or otherwise used without prior written permission from the copyright holde
             setFontControlsEnabled(true);
             activateSelectedFontMetrics(true);
         } else if (sourceKey === "custom") {
-            inheritCustomMetricFromSource(
-                previousSourceKey
-            );
             activateCustomRatios();
         } else {
             activateEmetricSource(sourceKey);
@@ -10206,7 +10331,9 @@ sold or otherwise used without prior written permission from the copyright holde
     function readValues() {
         return {
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
-            typeRatios: activeTypeRatios,
+            typeRatios: selectedTypeRatiosForCalculation(),
+            manualTypeSize:
+                selectedMetricSourceKey() === "custom",
             lineSpaceOverride: exactLineSpaceMM,
             metricsRatio: parseNumber(fMetricsLine.a.text, 1),
             lineRatio: parseNumber(fMetricsLine.b.text, 1.25),
@@ -11087,6 +11214,24 @@ sold or otherwise used without prior written permission from the copyright holde
                         markDirty();
                         updatePreviewDocument();
                     } catch (_) {}
+                    return;
+                }
+
+                if (
+                    selectedMetricSourceKey() === "custom"
+                ) {
+                    try {
+                        setTypeRatios(
+                            customTypeRatiosFromTypeSizeFields()
+                        );
+                        fontMetricsStatus.text =
+                            "Using Custom Metric from Type Size";
+                    } catch (_) {}
+
+                    update();
+                    syncCompactControls();
+                    markDirty();
+                    updatePreviewDocument();
                     return;
                 }
 
@@ -12088,7 +12233,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 selectedFont: "Use Selected Font as the source for typographic proportions.",
                 decimal: "Use Emetric Decimal as the source for typographic proportions.",
                 dozenal: "Use Emetric Dozenal as the source for typographic proportions.",
-                custom: "Use Custom Metric as the source for typographic proportions."
+                custom: "Use the Type Size fields as manual Custom Metric values."
             };
             for (var mi = 0; mi < metricsSourceDropdown.items.length; mi++) {
                 var metricItem = metricsSourceDropdown.items[mi];
@@ -12098,19 +12243,13 @@ sold or otherwise used without prior written permission from the copyright holde
             }
         } catch (_) {}
 
-        setFieldTooltip(customRatioMetrics, "Set the Custom Metric ratio value for Metrics.");
-        setFieldTooltip(customRatioAscender, "Set the Custom Metric ratio value for Ascender.");
-        setFieldTooltip(customRatioCapHeight, "Set the Custom Metric ratio value for Cap Height.");
-        setFieldTooltip(customRatioXHeight, "Set the Custom Metric ratio value for x-Height.");
-        setFieldTooltip(customRatioDescender, "Set the Custom Metric ratio value for Descender.");
-
         // Type Size and Type Leading
-        setTooltip(pTypeSize, "Review or edit the typographic metric values used by the grid.");
-        setFieldTooltip(fMetrics, "The em-based reference size used for all typographic proportions.");
-        setFieldTooltip(oAscender, "Derived Ascender value based on the selected metric source.");
-        setFieldTooltip(oUppercase, "Derived Cap Height value based on the selected metric source.");
-        setFieldTooltip(oLowercase, "Derived x-Height value based on the selected metric source.");
-        setFieldTooltip(oDescender, "Derived Descender value based on the selected metric source.");
+        setTooltip(pTypeSize, "Review typographic metric values. In Custom Metric, these fields become manual independent metric values.");
+        setFieldTooltip(fMetrics, "The Metrics value used for typographic proportions. In Custom Metric, this is a manual independent value.");
+        setFieldTooltip(oAscender, "Ascender value based on the selected metric source. In Custom Metric, Alignment Ascender uses this value directly.");
+        setFieldTooltip(oUppercase, "Cap Height value based on the selected metric source. In Custom Metric, Alignment Cap Height uses this value directly.");
+        setFieldTooltip(oLowercase, "x-Height value based on the selected metric source. In Custom Metric, Alignment x-Height uses this value directly.");
+        setFieldTooltip(oDescender, "Descender value based on the selected metric source. In Custom Metric, this is a manual independent value.");
 
         setTooltip(pLineSpace, "Set the relationship between the type metric size and leading.");
         setFieldTooltip(oLineSpace, "The vertical leading used by Type Defined Format.");
