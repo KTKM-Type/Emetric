@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.42.0-alpha.29
+
+- Split numeric field formatting into separate UI and internal precision helpers.
+- Visible editable UI values now normalize to three decimals.
+- Added an internal high-precision formatter for cases where text output needs to preserve up to eight decimals.
+- Initial numeric field values now pass through the UI formatter for consistent comma decimals and three-decimal display.
+
 ## 0.42.0-alpha.28
 
 - Changed Ascender alignment to measure the visible lowercase ascender stems from temporary outlines.

@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.28, 2026
+Version 0.42.0-alpha.29, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.28";
+    var VERSION = "0.42.0-alpha.29";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1166,10 +1166,36 @@ sold or otherwise used without prior written permission from the copyright holde
         return Math.round(value * p) / p;
     }
 
-    function formatInputNumber(value) {
-        var n = round(value, 8);
+    function formatDecimalNumber(value, decimals) {
+        var n = round(value, decimals);
         var s = String(n);
         return s.replace(".", ",");
+    }
+
+    function formatUiInputNumber(value) {
+        // Visible edit fields should be readable and consistent.
+        // Internal calculations keep their original numeric precision.
+        return formatDecimalNumber(value, 3);
+    }
+
+    function formatInternalInputNumber(value) {
+        // Use when a value must be written as text without losing
+        // high precision. UI fields should use formatUiInputNumber().
+        return formatDecimalNumber(value, 8);
+    }
+
+    function formatInitialUiInputValue(value) {
+        var text = String(value);
+
+        if (typeof value === "number") {
+            return formatUiInputNumber(value);
+        }
+
+        if (/^\s*-?\d+(?:[\.,]\d+)?\s*$/.test(text)) {
+            return formatUiInputNumber(parseNumber(text, 0));
+        }
+
+        return text;
     }
 
     function formatEditableMeasureValue(valueMM, unitIndex) {
@@ -1180,7 +1206,7 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         return (
-            formatInputNumber(value) +
+            formatUiInputNumber(value) +
             " " +
             UNIT_OPTIONS[unitIndex].suffix
         );
@@ -1482,10 +1508,10 @@ sold or otherwise used without prior written permission from the copyright holde
         try {
             var result =
                 evaluateArithmeticExpression(field.text);
-            field.text = formatInputNumber(result);
+            field.text = formatUiInputNumber(result);
             return result;
         } catch (_) {
-            field.text = formatInputNumber(fallbackValue);
+            field.text = formatUiInputNumber(fallbackValue);
             return fallbackValue;
         }
     }
@@ -1855,7 +1881,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var l = addFieldLabel(g, label, width);
 
-        var f = g.add("edittext", undefined, String(value));
+        var f = g.add("edittext", undefined, formatInitialUiInputValue(value));
         styleEditField(f);
         f.enabled = editable !== false;
         f.vtiEditableMeasure = editable !== false;
@@ -1913,13 +1939,13 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var l = addFieldLabel(g, label, width);
 
-        var fa = g.add("edittext", undefined, String(a));
+        var fa = g.add("edittext", undefined, formatInitialUiInputValue(a));
         styleEditField(fa);
         fa.enabled = editable !== false;
 
         addCenteredOperator(g, ":");
 
-        var fb = g.add("edittext", undefined, String(b));
+        var fb = g.add("edittext", undefined, formatInitialUiInputValue(b));
         styleEditField(fb);
         fb.enabled = editable !== false;
 
@@ -1941,7 +1967,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var l = addFieldLabel(g, label, width);
 
-        var factorField = g.add("edittext", undefined, String(factor));
+        var factorField = g.add("edittext", undefined, formatInitialUiInputValue(factor));
         styleEditField(factorField);
 
         addCenteredOperator(g, "=");
@@ -9411,15 +9437,15 @@ sold or otherwise used without prior written permission from the copyright holde
         descenderValue
     ) {
         customRatioMetrics.text =
-            formatInputNumber(metricsBase);
+            formatUiInputNumber(metricsBase);
         customRatioAscender.text =
-            formatInputNumber(ascenderValue);
+            formatUiInputNumber(ascenderValue);
         customRatioCapHeight.text =
-            formatInputNumber(capHeightValue);
+            formatUiInputNumber(capHeightValue);
         customRatioXHeight.text =
-            formatInputNumber(xHeightValue);
+            formatUiInputNumber(xHeightValue);
         customRatioDescender.text =
-            formatInputNumber(descenderValue);
+            formatUiInputNumber(descenderValue);
     }
 
     function inheritCustomMetricFromSource(sourceKey) {
@@ -11384,7 +11410,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
             if (commit) {
                 compactField.text =
-                    formatInputNumber(
+                    formatUiInputNumber(
                         normalizedValue
                     );
                 mainField.text =
