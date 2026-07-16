@@ -1,110 +1,145 @@
 # Emetric
 
-A typographic proportioning tool for creating type-based document grids, margins, and modular layouts in Adobe InDesign.
+**Emetric** is a typographic proportioning tool for Adobe InDesign. It turns type metrics into document geometry: page size, margins, grids, modules, guides, baseline grid, and optional reference pages.
 
-Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
+> Current version: **0.42.0-beta.1**  
+> Status: **Public beta**  
+> License: **Emetric Beta License** — source-available, not open source.
 
-> **Status:** Beta — current source version `0.42.0-beta.1`
+![Emetric compact view in InDesign](docs/img/emetric-compact-default.png)
 
-![Emetric Full](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png)
+## What Emetric does
 
-![Emetric Compact](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-compact.png)
+Emetric helps designers build page systems from typographic relationships rather than from arbitrary measurements. It can use a selected font, built-in metric systems, or manual custom metrics to generate an InDesign document with a consistent modular structure.
 
-## Main features
+Core uses:
 
-- Font-based measurements using **Selected Font**
-- **Emetric Decimal**, **Emetric Dozenal**, and **Custom Metric** sources
-- Typographic size, Type Leading, Vertical Grid, and Horizontal Grid calculations
-- Direct modular Columns and Rows with calculated gutters and margins
-- **Emetric Mode** section placed before Measurement and Sources, with **Type Defined Format** and **Custom Format**
-- Emetric Mode uses tooltips rather than visible explanatory notes
-- Separate Page Size, Margins, Module Area, Type Area, and Grid Modules sections; Page Size uses Width, Height, editable Page Ratio, and Lock Page Ratio
-- Vertical and Horizontal Grid sections use Grid Interval, Steps, Alignment, Grid Module Height/Width, Grid Height/Width, and Offset terminology
-- Optional **Lock Page Ratio** for custom page resizing
-- Refined bottom control bar with separated copyright, Preview, and action controls
-- In Custom Format, page dimensions and editable grid interval/module fields recalculate from the current page grid-step structure
-- Preview uses the restored live update behavior from before alpha.16
-- Tooltips are assigned throughout the UI from the latest tooltip inventory; unused tooltip slots display `[Empty]`
-- Margin-derived grid-step changes are preserved when page width or height is edited
-- InDesign Horizontal Gridline Division follows the Horizontal Grid value “Grid Interval” when custom page dimensions are active
-- Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
-- Optional facing pages, A-Parent, index page, and placeholder text under Document Options
-- Color themes, presets, and diagnostic logging
-- Colors panel labels use fixed-width right-aligned controls to withstand ScriptUI reflow when Metric Source changes
-- **Custom Metric** uses the existing Type Size fields as manual, independent metric values
-- When non-font metric sources are used, the selected font is scaled against the active Vertical Grid Alignment metric for Placeholder Text / [Basic Paragraph]
-- Ascender alignment uses the visible lowercase ascender outline so grid alignment follows the actual upstroke top
-- Creation of native InDesign guides, margins, columns, grids, and paragraph styles
+- create type-defined document formats;
+- test custom page sizes against typographic metrics;
+- generate vertical and horizontal grids;
+- calculate module areas, type areas, margins and gutters;
+- create placeholder text and an optional Emetric Data page;
+- use InDesign-native guides, layers, styles and grid preferences.
+
+## Screenshots
+
+### Compact View
+
+![Emetric compact view](docs/img/emetric-compact.png)
+
+### Full Settings
+
+![Emetric full settings](docs/img/emetric-full.png)
+
+### Compact View with generated document preview
+
+![Emetric compact view with InDesign document preview](docs/img/emetric-compact-default.png)
+
+## Main features in 0.42.0-beta.1
+
+- **Metric Source**: Selected Font, Emetric Decimal, Emetric Dozenal, Custom Metric.
+- **Custom Metric** uses the existing **Type Size** fields as manual, independent values.
+- **Vertical Grid Alignment** reads the corresponding Type Size value directly in Custom Metric.
+- **Custom Format** supports direct page size editing and editable grid interval/module fields.
+- Page Size preset selector for common formats such as A4, A3, Letter, Legal and Tabloid.
+- Separate sections for Page Size, Margins, Module Area, Type Area and Grid Modules.
+- Optional Placeholder Text using InDesign’s **[Basic Paragraph]**.
+- Optional **Emetric Data** page.
+- Layers are only created when their corresponding features are selected.
+- Presets are stored locally per user.
+- Compact View for fast iteration.
+- Public beta documentation and manual test checklist.
+
+## Quick install
+
+1. Download the latest release ZIP from GitHub Releases.
+2. Unzip it.
+3. Open Adobe InDesign.
+4. Run:
+
+```text
+Emetric-0.42.0-beta.1.jsx
+```
+
+Recommended installation paths are documented in [`docs/installation.md`](docs/installation.md).
 
 ## Repository structure
 
 ```text
 Emetric/
-├── .github/                 Issue and pull-request templates
-├── assets/                  Images and other repository assets
-├── dist/                    Packaged alpha, beta, and release files
-├── docs/                    Project, calculation, and user documentation
-├── src/indesign/Emetric.jsx Active source file
-└── tests/                   Manual test documentation
+├── .github/                 Issue templates and GitHub metadata
+├── dist/beta/               Versioned beta JSX file for distribution
+├── docs/                    Installation, beta notes, roadmap and images
+│   └── img/                 Screenshots used in README and docs
+├── src/indesign/            Active source file
+├── tests/                   Manual beta test checklist
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE.md               Emetric Beta License
+├── README.md
+└── RELEASE_NOTES.md
 ```
 
-The editable source is always:
+The active source file is:
 
 ```text
 src/indesign/Emetric.jsx
 ```
 
-The page-driven calculation relationships are documented in [`docs/anamorphic-format.md`](docs/anamorphic-format.md).
+The versioned file for this beta is:
 
-Do not add version numbers or beta labels to the source filename. Versioned files belong in GitHub Releases or, when needed, under `dist/`.
+```text
+dist/beta/Emetric-0.42.0-beta.1.jsx
+```
 
-## Installation
+## Presets and local data
 
-See [`docs/installation.md`](docs/installation.md).
+Emetric stores saved presets locally, outside the InDesign document, at:
 
-## Development
+```text
+Folder.userData/Emetric/presets.json
+```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/development.md`](docs/development.md).
+On macOS this usually corresponds to:
+
+```text
+~/Library/Application Support/Emetric/presets.json
+```
+
+See [`docs/presets.md`](docs/presets.md).
+
+## Beta testing
+
+Use [`tests/manual-test-checklist.md`](tests/manual-test-checklist.md) when testing Emetric in InDesign.
+
+Please include the following in bug reports:
+
+- Emetric version;
+- Adobe InDesign version;
+- operating system;
+- selected font and font style;
+- Metric Source;
+- page size and grid settings;
+- screenshot or screen recording when possible.
+
+## Roadmap
+
+The next planned areas are documented in [`docs/roadmap.md`](docs/roadmap.md), including:
+
+- Japanese **Q** unit support;
+- portrait/landscape orientation switching;
+- continued beta feedback and stability fixes.
 
 ## License
 
-Emetric is proprietary software and is **not open source**. All rights are reserved by Kristian Möller / KTKM Design AB. See [`LICENSE`](LICENSE).
+Emetric is distributed as a public beta under the **Emetric Beta License**. It is **not open source**. Redistribution, resale, sublicensing or repackaging is not permitted without written permission.
+
+Future stable releases may require a paid commercial license.
+
+See [`LICENSE.md`](LICENSE.md).
 
 ## Credits
 
-Based on Kristian Möller's Konstfack Master Project, 2012–2014.
+Based on Kristian Möller’s Konstfack Master Project, 2012–2014.
 
-Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
-
-### 0.42.0-alpha.23 notes
-
-This iteration keeps Placeholder Text on **[Basic Paragraph]**, sets its paragraph direction to **Left-to-Right**, sets **[Basic Paragraph]** to **Align Left**, and keeps its language aligned with the default InDesign language. The visible **Metrics & Leading Ratio** label is shortened to **M & L Ratio** while the full tooltip remains.
-
-
-## 0.42.0-alpha.28
-
-- **Vertical Grid → Alignment → Ascender** now explicitly uses the visible **Type Size → Ascender** value.
-- The same Type Size alignment measure is used for the baseline grid, Placeholder Text first baseline, Emetric Data text frame, and basic text-frame default.
-- Page Size Format keeps named standard choices such as A4 instead of reverting to InDesign’s generic **[Default]** preset when dimensions are identical.
-
-## 0.42.0-beta.1
-
-- First beta build prepared for wider testing.
-- Based on the accepted `0.42.0-alpha.32` Custom Metric model.
-- No new feature changes from alpha.32; this build promotes the current behavior for external testing.
-- Release status is now shown as **BETA** in the script title.
-
-## 0.42.0-alpha.32
-
-- **Custom Metric** no longer expands a separate set of metric fields.
-- Existing **Type Size** fields become the manual Custom Metric source.
-- Type Size values are independent in Custom Metric. Editing Ascender, for example, does not change Metrics, Cap Height, x-Height, or Descender.
-- Vertical Grid Alignment reads the corresponding Type Size value directly in Custom Metric. If Ascender is 2 mm and Alignment is Ascender, the first baseline is placed 2 mm from the top margin.
-- Custom Format does not overwrite manual Type Size values while Custom Metric is active.
-
-## 0.42.0-alpha.29
-
-- Editable numeric UI fields now use a dedicated three-decimal formatter.
-- A separate internal formatter is available for text values that need higher precision.
-- Initial numeric field values are normalized through the same UI formatter for more consistent display.
-
+Copyright © 2012–2026 Kristian Möller / KTKM Design AB. All rights reserved.
