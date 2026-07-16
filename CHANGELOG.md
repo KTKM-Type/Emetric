@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.42.0-beta.1
+
+- First beta build prepared for wider testing.
+- Promoted the accepted `0.42.0-alpha.32` behavior to beta without adding new functionality.
+- Release metadata now reports **BETA** and version `0.42.0-beta.1`.
+- Distribution file moved to `dist/beta/Emetric-0.42.0-beta.1.jsx`.
+
+
 ## 0.42.0-alpha.32
 
 - Changed **Custom Metric** to use the existing **Type Size** fields as manual metric values instead of expanding a separate Custom Metric field group.
