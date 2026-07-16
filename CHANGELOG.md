@@ -1,11 +1,10 @@
 # Changelog
 
-## 0.42.0-alpha.25
+## 0.42.0-alpha.26
 
-- Added a **Format** selector at the top of **Page Size**.
-- The selector reads InDesign document presets when available and includes common standard fallback formats such as A4, A3, Letter, Legal and Tabloid.
-- Selecting a format updates **Width** and **Height** and switches to **Custom Format**.
-- Added tooltip coverage for the new Page Size Format selector and its items.
+- Fixed Ascender alignment for horizontal grid-row guides so the guide structure aligns with the document grid/glyph-top origin.
+- Prevented the Page Size Format dropdown from reverting A4 to InDesign’s generic **[Default]** preset when dimensions match.
+- Standard named page sizes are now prioritized before imported InDesign document presets with identical dimensions.
 
 ## 0.42.0-alpha.24
 

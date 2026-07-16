@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.25, 2026
+Version 0.42.0-alpha.26, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.25";
+    var VERSION = "0.42.0-alpha.26";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1282,6 +1282,19 @@ sold or otherwise used without prior written permission from the copyright holde
         });
     }
 
+    function isDefaultPageSizePresetName(name) {
+        var text = String(name || "")
+            .toLowerCase()
+            .replace(/^\s+|\s+$/g, "")
+            .replace(/^\[|\]$/g, "");
+
+        return (
+            text === "default" ||
+            text === "$id/default" ||
+            text === "standard"
+        );
+    }
+
     function collectPageSizePresets() {
         var list = [
             {
@@ -1294,6 +1307,23 @@ sold or otherwise used without prior written permission from the copyright holde
         var keys = {};
         var oldUnit = null;
 
+        // Add Emetric's named standard formats first. This lets A4 stay A4
+        // after sync, instead of being replaced by InDesign's generic
+        // [Default] preset when both share the same dimensions.
+        for (var fallbackIndex = 0;
+             fallbackIndex < PAGE_SIZE_PRESET_FALLBACKS.length;
+             fallbackIndex++) {
+            var fallback = PAGE_SIZE_PRESET_FALLBACKS[fallbackIndex];
+            addPageSizePreset(
+                list,
+                keys,
+                fallback.name,
+                fallback.widthMM,
+                fallback.heightMM,
+                "standard"
+            );
+        }
+
         try {
             oldUnit = app.scriptPreferences.measurementUnit;
             app.scriptPreferences.measurementUnit =
@@ -1305,6 +1335,11 @@ sold or otherwise used without prior written permission from the copyright holde
             for (var i = 0; i < documentPresets.length; i++) {
                 var preset = documentPresets[i];
                 var presetName = String(preset.name || "");
+
+                if (isDefaultPageSizePresetName(presetName)) {
+                    continue;
+                }
+
                 var widthMM = parsePresetDimensionMM(preset.pageWidth);
                 var heightMM = parsePresetDimensionMM(preset.pageHeight);
 
@@ -1325,20 +1360,6 @@ sold or otherwise used without prior written permission from the copyright holde
             }
         } catch (_) {}
 
-        for (var fallbackIndex = 0;
-             fallbackIndex < PAGE_SIZE_PRESET_FALLBACKS.length;
-             fallbackIndex++) {
-            var fallback = PAGE_SIZE_PRESET_FALLBACKS[fallbackIndex];
-            addPageSizePreset(
-                list,
-                keys,
-                fallback.name,
-                fallback.widthMM,
-                fallback.heightMM,
-                "standard"
-            );
-        }
-
         return list;
     }
 
@@ -1352,18 +1373,37 @@ sold or otherwise used without prior written permission from the copyright holde
         return labels;
     }
 
-    function matchingPageSizePresetIndex(presets, widthMM, heightMM) {
+    function pageSizePresetMatches(preset, widthMM, heightMM) {
         var tolerance = 0.1;
 
+        if (
+            !preset ||
+            !(preset.widthMM > 0) ||
+            !(preset.heightMM > 0) ||
+            !(widthMM > 0) ||
+            !(heightMM > 0)
+        ) {
+            return false;
+        }
+
+        return (
+            Math.abs(preset.widthMM - widthMM) <= tolerance &&
+            Math.abs(preset.heightMM - heightMM) <= tolerance
+        );
+    }
+
+    function matchingPageSizePresetIndex(presets, widthMM, heightMM) {
         if (!(widthMM > 0) || !(heightMM > 0)) {
             return 0;
         }
 
         for (var i = 1; i < presets.length; i++) {
-            var preset = presets[i];
             if (
-                Math.abs(preset.widthMM - widthMM) <= tolerance &&
-                Math.abs(preset.heightMM - heightMM) <= tolerance
+                pageSizePresetMatches(
+                    presets[i],
+                    widthMM,
+                    heightMM
+                )
             ) {
                 return i;
             }
@@ -2048,9 +2088,11 @@ sold or otherwise used without prior written permission from the copyright holde
         // margins use different values.
         startX = r.marginLeft + ((r.typeAreaWidth - r.gridWidth) / 2);
 
-        // top excess is page height contribution from top factor.
-        startY = r.marginTop + r.offsetGridVertical - r.verticalLine
-                 + r.offsetGridVertical;
+        // Vertical/Grid-row guides must align to the same page-grid origin as
+        // the glyph tops/stems used by the selected Vertical Grid Alignment.
+        // The previous formula added the selected metric offset again, which
+        // made Ascender alignment drift away from the document grid.
+        startY = r.marginTop;
 
         var i, x, y;
 
@@ -9782,12 +9824,35 @@ sold or otherwise used without prior written permission from the copyright holde
         pageSizePresetIsUpdating = true;
 
         try {
-            pageSizePresetDropdown.selection =
-                matchingPageSizePresetIndex(
-                    PAGE_SIZE_PRESETS,
+            var currentSelection =
+                pageSizePresetDropdown.selection;
+            var currentPreset =
+                currentSelection &&
+                currentSelection.emetricPageSizePreset
+                    ? currentSelection.emetricPageSizePreset
+                    : null;
+
+            if (
+                currentPreset &&
+                currentPreset.source !== "custom" &&
+                pageSizePresetMatches(
+                    currentPreset,
                     currentResult.pageWidth,
                     currentResult.pageHeight
-                );
+                )
+            ) {
+                // Keep the user's chosen named format, e.g. A4, instead of
+                // changing the dropdown to another preset with identical size.
+                pageSizePresetDropdown.selection =
+                    currentSelection.index;
+            } else {
+                pageSizePresetDropdown.selection =
+                    matchingPageSizePresetIndex(
+                        PAGE_SIZE_PRESETS,
+                        currentResult.pageWidth,
+                        currentResult.pageHeight
+                    );
+            }
         } catch (_) {}
 
         pageSizePresetIsUpdating = false;

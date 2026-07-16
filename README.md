@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.25`
+> **Status:** Alpha — current source version `0.42.0-alpha.26`
 
 ## Main features
 
@@ -74,7 +74,7 @@ Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
 This iteration keeps Placeholder Text on **[Basic Paragraph]**, sets its paragraph direction to **Left-to-Right**, sets **[Basic Paragraph]** to **Align Left**, and keeps its language aligned with the default InDesign language. The visible **Metrics & Leading Ratio** label is shortened to **M & L Ratio** while the full tooltip remains.
 
 
-## 0.42.0-alpha.25
+## 0.42.0-alpha.26
 
-- Added a Page Size Format selector that loads InDesign document presets where available and includes common fallback formats such as A4, A3, Letter, Legal and Tabloid.
-- Selecting a format updates Width and Height and switches to Custom Format.
+- Fixed Ascender alignment for horizontal grid-row guides so selected Ascender alignment remains on the same grid origin as Placeholder Text.
+- Page Size Format now keeps named standard choices such as A4 instead of reverting to InDesign’s generic **[Default]** preset when the dimensions are identical.
