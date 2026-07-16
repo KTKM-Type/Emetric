@@ -12,6 +12,8 @@
 
 Emetric helps designers build page systems from typographic relationships rather than from arbitrary measurements. It can use a selected font, built-in metric systems, or manual custom metrics to generate an InDesign document with a consistent modular structure.
 
+The project builds on Kristian Möller’s Master’s thesis at Konstfack, [*Visual Type Instrument*](https://www.diva-portal.org/smash/record.jsf?dswid=-8742&pid=diva2%3A812789&c=14&searchType=SIMPLE&language=sv&query=Visual+Type+Instrument&af=%5B%5D&aq=%5B%5B%5D%5D&aq2=%5B%5B%5D%5D&aqe=%5B%5D&noOfRows=50&sortOrder=author_sort_asc&sortOrder2=title_sort_asc&onlyFullText=false&sf=all), where type metrics and proportional systems were explored as a basis for visual design tools.
+
 Core uses:
 
 - create type-defined document formats;
@@ -140,6 +142,6 @@ See [`LICENSE.md`](LICENSE.md).
 
 ## Credits
 
-Based on Kristian Möller’s Konstfack Master Project, 2012–2014.
+Based on Kristian Möller’s Konstfack Master’s thesis, [*Visual Type Instrument*](https://www.diva-portal.org/smash/record.jsf?dswid=-8742&pid=diva2%3A812789&c=14&searchType=SIMPLE&language=sv&query=Visual+Type+Instrument&af=%5B%5D&aq=%5B%5B%5D%5D&aq2=%5B%5B%5D%5D&aqe=%5B%5D&noOfRows=50&sortOrder=author_sort_asc&sortOrder2=title_sort_asc&onlyFullText=false&sf=all), 2012–2014.
 
 Copyright © 2012–2026 Kristian Möller / KTKM Design AB. All rights reserved.
