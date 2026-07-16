@@ -1,4 +1,29 @@
 # Changelog
+
+## 0.42.0-alpha.28
+
+- Changed Ascender alignment to measure the visible lowercase ascender stems from temporary outlines.
+- Kept Type Size → Ascender as the displayed alignment value, but made the measured ascender reflect the actual upstroke top.
+- Falls back to InDesign’s ascent metric if outline measurement is unavailable for a specific font.
+
+## 0.42.0-alpha.27
+
+- Bound **Vertical Grid → Alignment → Ascender** explicitly to the visible **Type Size → Ascender** value.
+- Reused that same Type Size alignment measure for baseline grid start, Placeholder Text first baseline, Emetric Data text frame baseline, and the basic text-frame default.
+- Kept horizontal guide alignment and Page Size preset behavior from alpha.26.
+
+## 0.42.0-alpha.26
+
+- Fixed Ascender alignment for horizontal grid-row guides so the guide structure aligns with the document grid/glyph-top origin.
+- Prevented the Page Size Format dropdown from reverting A4 to InDesign’s generic **[Default]** preset when dimensions match.
+- Standard named page sizes are now prioritized before imported InDesign document presets with identical dimensions.
+
+## 0.42.0-alpha.24
+
+- Scaled the selected font for Placeholder Text / [Basic Paragraph] when Metric Source is **Emetric Decimal**, **Emetric Dozenal**, or **Custom Metric**.
+- The selected font now follows the active **Vertical Grid → Alignment** metric: Metrics, Ascender, Cap Height, or x-Height.
+- Kept the selected font as the output font even when the metric source is not **Selected Font**.
+
 ## 0.42.0-alpha.23
 
 - Set [Basic Paragraph] to Align Left for Placeholder Text output.

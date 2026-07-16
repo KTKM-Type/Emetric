@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.23, 2026
+Version 0.42.0-alpha.28, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.23";
+    var VERSION = "0.42.0-alpha.28";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -479,6 +479,7 @@ sold or otherwise used without prior written permission from the copyright holde
     };
 
     var selectedFontMetrics = null;
+    var lastSelectedFontMetrics = null;
     var installedFontRecords = [];
     var installedFontFamilies = [];
     var fontSelectionIsUpdating = false;
@@ -572,6 +573,33 @@ sold or otherwise used without prior written permission from the copyright holde
     ];
 
     var currentUnitIndex = 0;
+
+    var PAGE_SIZE_PRESET_FALLBACKS = [
+        { name: "A0", widthMM: 841, heightMM: 1189 },
+        { name: "A1", widthMM: 594, heightMM: 841 },
+        { name: "A2", widthMM: 420, heightMM: 594 },
+        { name: "A3", widthMM: 297, heightMM: 420 },
+        { name: "A4", widthMM: 210, heightMM: 297 },
+        { name: "A5", widthMM: 148, heightMM: 210 },
+        { name: "A6", widthMM: 105, heightMM: 148 },
+        { name: "B0", widthMM: 1000, heightMM: 1414 },
+        { name: "B1", widthMM: 707, heightMM: 1000 },
+        { name: "B2", widthMM: 500, heightMM: 707 },
+        { name: "B3", widthMM: 353, heightMM: 500 },
+        { name: "B4", widthMM: 250, heightMM: 353 },
+        { name: "B5", widthMM: 176, heightMM: 250 },
+        { name: "B6", widthMM: 125, heightMM: 176 },
+        { name: "Letter", widthMM: 215.9, heightMM: 279.4 },
+        { name: "Legal", widthMM: 215.9, heightMM: 355.6 },
+        { name: "Tabloid", widthMM: 279.4, heightMM: 431.8 },
+        { name: "Ledger", widthMM: 431.8, heightMM: 279.4 },
+        { name: "Executive", widthMM: 184.15, heightMM: 266.7 },
+        { name: "Half Letter", widthMM: 139.7, heightMM: 215.9 },
+        { name: "DL Envelope", widthMM: 99, heightMM: 210 },
+        { name: "C4 Envelope", widthMM: 229, heightMM: 324 },
+        { name: "C5 Envelope", widthMM: 162, heightMM: 229 },
+        { name: "C6 Envelope", widthMM: 114, heightMM: 162 }
+    ];
 
     function unitToMM(value, unitIndex) {
         if (unitIndex === 5) {
@@ -1187,6 +1215,203 @@ sold or otherwise used without prior written permission from the copyright holde
         return formatNumber(value) + " mm";
     }
 
+    function parsePresetDimensionMM(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        if (typeof value === "number") {
+            return Number(value);
+        }
+
+        var text = String(value)
+            .replace(",", ".")
+            .replace(/^\s+|\s+$/g, "");
+
+        if (!text) {
+            return null;
+        }
+
+        var numeric = parseFloat(text);
+        if (!(numeric > 0)) {
+            return null;
+        }
+
+        if (/pt$/i.test(text)) {
+            return numeric / MM_TO_PT;
+        }
+
+        if (/in$/i.test(text)) {
+            return numeric * 25.4;
+        }
+
+        return numeric;
+    }
+
+    function pageSizePresetKey(name, widthMM, heightMM) {
+        return (
+            String(name || "")
+                .toLowerCase()
+                .replace(/^\s+|\s+$/g, "") +
+            "|" +
+            String(Math.round(Number(widthMM || 0) * 10) / 10) +
+            "x" +
+            String(Math.round(Number(heightMM || 0) * 10) / 10)
+        );
+    }
+
+    function addPageSizePreset(list, keys, name, widthMM, heightMM, source) {
+        var w = Number(widthMM);
+        var h = Number(heightMM);
+
+        if (!(w > 0) || !(h > 0)) {
+            return;
+        }
+
+        var key = pageSizePresetKey(name, w, h);
+        if (keys[key]) {
+            return;
+        }
+
+        keys[key] = true;
+        list.push({
+            name: String(name || "Untitled"),
+            widthMM: w,
+            heightMM: h,
+            source: source || "fallback"
+        });
+    }
+
+    function isDefaultPageSizePresetName(name) {
+        var text = String(name || "")
+            .toLowerCase()
+            .replace(/^\s+|\s+$/g, "")
+            .replace(/^\[|\]$/g, "");
+
+        return (
+            text === "default" ||
+            text === "$id/default" ||
+            text === "standard"
+        );
+    }
+
+    function collectPageSizePresets() {
+        var list = [
+            {
+                name: "Custom",
+                widthMM: null,
+                heightMM: null,
+                source: "custom"
+            }
+        ];
+        var keys = {};
+        var oldUnit = null;
+
+        // Add Emetric's named standard formats first. This lets A4 stay A4
+        // after sync, instead of being replaced by InDesign's generic
+        // [Default] preset when both share the same dimensions.
+        for (var fallbackIndex = 0;
+             fallbackIndex < PAGE_SIZE_PRESET_FALLBACKS.length;
+             fallbackIndex++) {
+            var fallback = PAGE_SIZE_PRESET_FALLBACKS[fallbackIndex];
+            addPageSizePreset(
+                list,
+                keys,
+                fallback.name,
+                fallback.widthMM,
+                fallback.heightMM,
+                "standard"
+            );
+        }
+
+        try {
+            oldUnit = app.scriptPreferences.measurementUnit;
+            app.scriptPreferences.measurementUnit =
+                MeasurementUnits.MILLIMETERS;
+        } catch (_) {}
+
+        try {
+            var documentPresets = app.documentPresets;
+            for (var i = 0; i < documentPresets.length; i++) {
+                var preset = documentPresets[i];
+                var presetName = String(preset.name || "");
+
+                if (isDefaultPageSizePresetName(presetName)) {
+                    continue;
+                }
+
+                var widthMM = parsePresetDimensionMM(preset.pageWidth);
+                var heightMM = parsePresetDimensionMM(preset.pageHeight);
+
+                addPageSizePreset(
+                    list,
+                    keys,
+                    presetName,
+                    widthMM,
+                    heightMM,
+                    "indesign"
+                );
+            }
+        } catch (_) {}
+
+        try {
+            if (oldUnit !== null && oldUnit !== undefined) {
+                app.scriptPreferences.measurementUnit = oldUnit;
+            }
+        } catch (_) {}
+
+        return list;
+    }
+
+    function pageSizePresetLabels(presets) {
+        var labels = [];
+
+        for (var i = 0; i < presets.length; i++) {
+            labels.push(presets[i].name);
+        }
+
+        return labels;
+    }
+
+    function pageSizePresetMatches(preset, widthMM, heightMM) {
+        var tolerance = 0.1;
+
+        if (
+            !preset ||
+            !(preset.widthMM > 0) ||
+            !(preset.heightMM > 0) ||
+            !(widthMM > 0) ||
+            !(heightMM > 0)
+        ) {
+            return false;
+        }
+
+        return (
+            Math.abs(preset.widthMM - widthMM) <= tolerance &&
+            Math.abs(preset.heightMM - heightMM) <= tolerance
+        );
+    }
+
+    function matchingPageSizePresetIndex(presets, widthMM, heightMM) {
+        if (!(widthMM > 0) || !(heightMM > 0)) {
+            return 0;
+        }
+
+        for (var i = 1; i < presets.length; i++) {
+            if (
+                pageSizePresetMatches(
+                    presets[i],
+                    widthMM,
+                    heightMM
+                )
+            ) {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
     function toPoints(mm) {
         return mm * MM_TO_PT;
     }
@@ -1375,7 +1600,10 @@ sold or otherwise used without prior written permission from the copyright holde
         var descender = metrics * typeRatios.descender;
         var lineSpace = verticalLine;
 
-        function offsetSourceValue(sourceIndex) {
+        function typeSizeMeasureForAlignment(sourceIndex) {
+            // Keep grid alignment tied to the visible Type Size values.
+            // Ascender alignment must use Type Size > Ascender explicitly,
+            // not a separately measured or inferred font value.
             var value = lowercase;
 
             if (sourceIndex === 0) {
@@ -1391,10 +1619,15 @@ sold or otherwise used without prior written permission from the copyright holde
             return Math.abs(value);
         }
 
+        var verticalAlignmentMeasure =
+            typeSizeMeasureForAlignment(v.rowOffsetSourceIndex);
+        var horizontalAlignmentMeasure =
+            typeSizeMeasureForAlignment(v.columnOffsetSourceIndex);
+
         var offsetGridVertical =
-            offsetSourceValue(v.rowOffsetSourceIndex) / 2;
+            verticalAlignmentMeasure / 2;
         var offsetGridHorizontal =
-            offsetSourceValue(v.columnOffsetSourceIndex) / 2;
+            horizontalAlignmentMeasure / 2;
 
         // GRID MARGIN
         // Horizontal values follow Horizontal Grid Interval; vertical values follow
@@ -1484,10 +1717,12 @@ sold or otherwise used without prior written permission from the copyright holde
 
             verticalLine: verticalLine,
             verticalGridline: verticalGridline,
+            verticalAlignmentMeasure: verticalAlignmentMeasure,
             offsetGridVertical: offsetGridVertical,
 
             horizontalLine: horizontalLine,
             horizontalGridline: horizontalGridline,
+            horizontalAlignmentMeasure: horizontalAlignmentMeasure,
             offsetGridHorizontal: offsetGridHorizontal,
 
             gridMarginHorizontal: gridMarginHorizontal,
@@ -1736,12 +1971,16 @@ sold or otherwise used without prior written permission from the copyright holde
 
         var d = g.add("dropdownlist", undefined, items);
         d.preferredSize.width = UI_FIELD_WIDTH * 2 + 8;
+        d.minimumSize.width = UI_FIELD_WIDTH * 2 + 8;
+        d.maximumSize.width = UI_FIELD_WIDTH * 2 + 8;
         d.selection = selectedIndex || 0;
 
         var dropdownUnitSpacer = g.add("statictext", undefined, "");
         dropdownUnitSpacer.preferredSize.width = UI_UNIT_WIDTH;
         dropdownUnitSpacer.minimumSize.width = UI_UNIT_WIDTH;
         dropdownUnitSpacer.maximumSize.width = UI_UNIT_WIDTH;
+        d.label = l;
+        d.unitLabel = dropdownUnitSpacer;
 
         return d;
     }
@@ -1859,9 +2098,11 @@ sold or otherwise used without prior written permission from the copyright holde
         // margins use different values.
         startX = r.marginLeft + ((r.typeAreaWidth - r.gridWidth) / 2);
 
-        // top excess is page height contribution from top factor.
-        startY = r.marginTop + r.offsetGridVertical - r.verticalLine
-                 + r.offsetGridVertical;
+        // Vertical/Grid-row guides must align to the same page-grid origin as
+        // the glyph tops/stems used by the selected Vertical Grid Alignment.
+        // The previous formula added the selected metric offset again, which
+        // made Ascender alignment drift away from the document grid.
+        startY = r.marginTop;
 
         var i, x, y;
 
@@ -2134,7 +2375,8 @@ sold or otherwise used without prior written permission from the copyright holde
         // equals two times the calculated Row Offset.
         try {
             gp.baselineDivision = r.lineSpace;
-            gp.baselineStart = r.offsetGridVertical * 2;
+            gp.baselineStart =
+                scriptNumber(r.verticalAlignmentMeasure) + " mm";
             gp.baselineGridShown = true;
             gp.baselineColor = baselineGridColor;
         } catch (_) {}
@@ -2235,7 +2477,7 @@ sold or otherwise used without prior written permission from the copyright holde
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
                     exportPointValue(
-                        r.offsetGridVertical * 2,
+                        r.verticalAlignmentMeasure,
                         options.unitIndex
                     );
             } catch (_) {}
@@ -2327,7 +2569,7 @@ sold or otherwise used without prior written permission from the copyright holde
             "Document Grid Start:\t−" +
                 selectedMeasure(r.offsetGridVertical) + "\r" +
             "Baseline Start:\t" +
-                selectedMeasure(r.offsetGridVertical * 2) +
+                selectedMeasure(r.verticalAlignmentMeasure) +
                 " from Top Margin\r\r" +
 
             "Vertical Grid\r" +
@@ -2442,7 +2684,10 @@ sold or otherwise used without prior written permission from the copyright holde
                 // First baseline follows the selected Vertical Alignment source.
                 tfp.firstBaselineOffset = FirstBaseline.FIXED_HEIGHT;
                 tfp.minimumFirstBaselineOffset =
-                    r.offsetGridVertical * 2;
+                    exportPointValue(
+                        r.verticalAlignmentMeasure,
+                        options.unitIndex
+                    );
 
                 // Restore all inset spacing to zero.
                 tfp.insetSpacing = [0, 0, 0, 0];
@@ -2751,14 +2996,75 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
+    function metricMeasureForAlignment(result, sourceIndex) {
+        if (!result) return null;
+
+        if (sourceIndex === 0) return result.metrics;
+        if (sourceIndex === 1) return Math.abs(result.ascender);
+        if (sourceIndex === 2) return Math.abs(result.uppercase);
+        if (sourceIndex === 3) return Math.abs(result.lowercase);
+
+        return result.metrics;
+    }
+
+    function fontMetricRatioForAlignment(fontMetrics, sourceIndex) {
+        if (!fontMetrics) return null;
+
+        var emSize = Number(fontMetrics.unitsPerEm);
+        if (!(emSize > 0)) return null;
+
+        if (sourceIndex === 0) return 1;
+        if (sourceIndex === 1) return Math.abs(Number(fontMetrics.ascender)) / emSize;
+        if (sourceIndex === 2) return Math.abs(Number(fontMetrics.capHeight)) / emSize;
+        if (sourceIndex === 3) return Math.abs(Number(fontMetrics.xHeight)) / emSize;
+
+        return 1;
+    }
+
+    function adjustedSelectedFontSizeMM(result, options) {
+        var fallbackSize = result ? result.metrics : 0;
+        var fontMetrics = options ? options.selectedFontMetrics : null;
+
+        if (!result || !fontMetrics) {
+            return fallbackSize;
+        }
+
+        var alignmentIndex = options.rowOffsetSourceIndex;
+
+        if (
+            alignmentIndex === null ||
+            alignmentIndex === undefined
+        ) {
+            alignmentIndex = 3;
+        }
+
+        var targetMeasure = metricMeasureForAlignment(
+            result,
+            Number(alignmentIndex)
+        );
+        var fontRatio = fontMetricRatioForAlignment(
+            fontMetrics,
+            Number(alignmentIndex)
+        );
+
+        if (!(targetMeasure > 0) || !(fontRatio > 0)) {
+            return fallbackSize;
+        }
+
+        return targetMeasure / fontRatio;
+    }
+
     function applyDocumentDefaultStyles(doc, r, options) {
         var fontRecord = options.selectedFontRecord || null;
-        var pointSize = exportPointValue(r.metrics, options.unitIndex);
+        var adjustedFontSizeMM = adjustedSelectedFontSizeMM(r, options);
+        var pointSize = exportPointValue(adjustedFontSizeMM, options.unitIndex);
         var leading = exportPointValue(r.lineSpace, options.unitIndex);
         var defaultLanguage = getDefaultInDesignLanguage(doc);
 
         // Document text defaults control the actual font and size used
-        // when new text is created without an explicit style.
+        // when new text is created without an explicit style. When Metric Source
+        // is not Selected Font, the selected font is optically scaled so the
+        // active Vertical Grid Alignment metric matches the Type Size value.
         try {
             var defaults = doc.textDefaults;
 
@@ -2847,7 +3153,7 @@ sold or otherwise used without prior written permission from the copyright holde
                         FirstBaseline.FIXED_HEIGHT;
                     tfp.minimumFirstBaselineOffset =
                         exportPointValue(
-                            r.offsetGridVertical * 2,
+                            r.verticalAlignmentMeasure,
                             options.unitIndex
                         );
                 } catch (_) {}
@@ -4549,7 +4855,26 @@ sold or otherwise used without prior written permission from the copyright holde
     col3.minimumSize.width = UI_COLUMN_WIDTH;
     col3.maximumSize.width = UI_COLUMN_WIDTH;
 
+    var PAGE_SIZE_PRESETS = collectPageSizePresets();
+
     var pPage = addSection(col3, "Page Size");
+    var pageSizePresetDropdown =
+        addDropdownRow(
+            pPage,
+            "Format",
+            pageSizePresetLabels(PAGE_SIZE_PRESETS),
+            0
+        );
+    for (var pageSizePresetItemIndex = 0;
+         pageSizePresetItemIndex < pageSizePresetDropdown.items.length;
+         pageSizePresetItemIndex++) {
+        try {
+            pageSizePresetDropdown.items[pageSizePresetItemIndex]
+                .emetricPageSizePreset =
+                PAGE_SIZE_PRESETS[pageSizePresetItemIndex];
+        } catch (_) {}
+    }
+
     var oPageWidth = addRow(pPage, "Width", "", true, "mm");
     var oPageHeight = addRow(pPage, "Height", "", true, "mm");
     var oFormatRatio =
@@ -4561,6 +4886,13 @@ sold or otherwise used without prior written permission from the copyright holde
     lockFormatRatio.enabled = false;
     lockFormatRatio.helpTip =
         "Keeps the current page width/height ratio when Custom Format is active.";
+
+    pageSizePresetDropdown.helpTip =
+        "Choose a standard InDesign page format to update Width and Height.";
+    try {
+        pageSizePresetDropdown.label.helpTip =
+            pageSizePresetDropdown.helpTip;
+    } catch (_) {}
 
     oPageWidth.helpTip =
         "Custom Format: Width derives Horizontal Grid Interval from the current horizontal page grid steps.";
@@ -7807,6 +8139,121 @@ sold or otherwise used without prior written permission from the copyright holde
         return bottom;
     }
 
+    function outlineTop(pageItem) {
+        var top = null;
+
+        try {
+            var bounds = pageItem.geometricBounds;
+            top = Number(bounds[0]);
+        } catch (_) {}
+
+        try {
+            if (pageItem.pageItems && pageItem.pageItems.length > 0) {
+                for (var i = 0; i < pageItem.pageItems.length; i++) {
+                    var childTop =
+                        outlineTop(pageItem.pageItems[i]);
+
+                    if (
+                        childTop !== null &&
+                        (top === null || childTop < top)
+                    ) {
+                        top = childTop;
+                    }
+                }
+            }
+        } catch (_) {}
+
+        return top;
+    }
+
+    function measureVisualAscender(doc, record) {
+        var frame = createMetricFrame(
+            doc,
+            "bdhkl",
+            record,
+            FirstBaseline.FIXED_HEIGHT
+        );
+
+        var baseline = null;
+        var outlines = null;
+
+        try {
+            // Use a fixed baseline far enough down to make the outline top
+            // measurable. The returned value is the visual distance from the
+            // baseline to lowercase ascender stems, not InDesign's abstract
+            // font ascent or line-box ascent.
+            frame.textFramePreferences.minimumFirstBaselineOffset = 100;
+            try { frame.parentStory.recompose(); } catch (_) {}
+            try { doc.recompose(); } catch (_) {}
+
+            baseline = Number(frame.lines[0].baseline);
+
+            try {
+                outlines = frame.texts[0].createOutlines(false);
+            } catch (_) {
+                try {
+                    outlines = frame.parentStory.createOutlines(false);
+                } catch (__) {
+                    outlines = null;
+                }
+            }
+
+            if (!outlines) {
+                throw new Error(
+                    "InDesign could not create temporary outlines " +
+                    "for the ascender measurement."
+                );
+            }
+
+            if (!(outlines instanceof Array)) {
+                outlines = [outlines];
+            }
+
+            var highestTop = null;
+
+            for (var i = 0; i < outlines.length; i++) {
+                var top = outlineTop(outlines[i]);
+
+                if (
+                    top !== null &&
+                    (highestTop === null || top < highestTop)
+                ) {
+                    highestTop = top;
+                }
+            }
+
+            if (highestTop === null) {
+                throw new Error(
+                    "InDesign could not measure the outlined ascenders."
+                );
+            }
+
+            var ascender = baseline - highestTop;
+
+            if (!(ascender > 0)) {
+                throw new Error(
+                    "The measured ascender was not above the baseline."
+                );
+            }
+
+            return ascender;
+        } finally {
+            if (outlines) {
+                try {
+                    if (!(outlines instanceof Array)) {
+                        outlines = [outlines];
+                    }
+
+                    for (var j = outlines.length - 1; j >= 0; j--) {
+                        try { outlines[j].remove(); } catch (_) {}
+                    }
+                } catch (_) {}
+            }
+
+            try { frame.remove(); } catch (_) {}
+        }
+    }
+
     function measureDescender(doc, record) {
         var frame = createMetricFrame(
             doc,
@@ -8501,12 +8948,20 @@ sold or otherwise used without prior written permission from the copyright holde
                 doc.documentPreferences.pageHeight = 200;
             } catch (_) {}
 
-            var ascent = measureFirstBaselineMetric(
-                doc,
-                record,
-                FirstBaseline.ASCENT_OFFSET,
-                "Hdx"
-            );
+            var ascent = null;
+
+            try {
+                ascent = measureVisualAscender(doc, record);
+            } catch (_) {
+                // Fallback to InDesign's own ascent option when outline
+                // measurement is unavailable for a specific font.
+                ascent = measureFirstBaselineMetric(
+                    doc,
+                    record,
+                    FirstBaseline.ASCENT_OFFSET,
+                    "Hdx"
+                );
+            }
 
             var capHeight = measureFirstBaselineMetric(
                 doc,
@@ -8528,6 +8983,8 @@ sold or otherwise used without prior written permission from the copyright holde
 
             return {
                 // InDesign's temporary metric sample is measured at 100 pt.
+                // Ascender uses temporary outlines of lowercase ascender stems,
+                // so Ascender alignment follows the visible upstroke top.
                 unitsPerEm: 100,
                 // The font's native design-space UPM, read from the OpenType
                 // head table when the source file is accessible.
@@ -9134,6 +9591,7 @@ sold or otherwise used without prior written permission from the copyright holde
             var emSize = Number(data.unitsPerEm);
 
             selectedFontMetrics = data;
+            lastSelectedFontMetrics = data;
             setTypeRatios({
                 ascender: Number(data.ascender) / emSize,
                 capHeight: Number(data.capHeight) / emSize,
@@ -9480,6 +9938,102 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
+    var pageSizePresetIsUpdating = false;
+
+    function selectedPageSizePreset() {
+        try {
+            if (
+                pageSizePresetDropdown.selection &&
+                pageSizePresetDropdown.selection.emetricPageSizePreset
+            ) {
+                return pageSizePresetDropdown
+                    .selection
+                    .emetricPageSizePreset;
+            }
+        } catch (_) {}
+
+        return null;
+    }
+
+    function syncPageSizePresetDropdown() {
+        if (!currentResult) {
+            return;
+        }
+
+        pageSizePresetIsUpdating = true;
+
+        try {
+            var currentSelection =
+                pageSizePresetDropdown.selection;
+            var currentPreset =
+                currentSelection &&
+                currentSelection.emetricPageSizePreset
+                    ? currentSelection.emetricPageSizePreset
+                    : null;
+
+            if (
+                currentPreset &&
+                currentPreset.source !== "custom" &&
+                pageSizePresetMatches(
+                    currentPreset,
+                    currentResult.pageWidth,
+                    currentResult.pageHeight
+                )
+            ) {
+                // Keep the user's chosen named format, e.g. A4, instead of
+                // changing the dropdown to another preset with identical size.
+                pageSizePresetDropdown.selection =
+                    currentSelection.index;
+            } else {
+                pageSizePresetDropdown.selection =
+                    matchingPageSizePresetIndex(
+                        PAGE_SIZE_PRESETS,
+                        currentResult.pageWidth,
+                        currentResult.pageHeight
+                    );
+            }
+        } catch (_) {}
+
+        pageSizePresetIsUpdating = false;
+    }
+
+    function applyPageSizePresetSelection() {
+        if (pageSizePresetIsUpdating) {
+            return;
+        }
+
+        var preset = selectedPageSizePreset();
+
+        if (
+            !preset ||
+            preset.source === "custom" ||
+            !(preset.widthMM > 0) ||
+            !(preset.heightMM > 0)
+        ) {
+            return;
+        }
+
+        setDiagnosticAction(
+            "Apply Page Size Preset: " + preset.name,
+            true
+        );
+
+        try {
+            typeLedFormat.value = false;
+            anamorphicFormat.value = true;
+        } catch (_) {}
+
+        exactPageWidthMM = Number(preset.widthMM);
+        exactPageHeightMM = Number(preset.heightMM);
+        exactLineSpaceMM = null;
+
+        updateAnamorphicFormatControls();
+        update();
+        syncCompactControls();
+        markDirty();
+        updatePreviewDocument();
+    }
+
     function readValues() {
         return {
             metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
@@ -9576,6 +10130,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
             setMeasureField(oPageWidth, currentResult.pageWidth);
             setMeasureField(oPageHeight, currentResult.pageHeight);
+            syncPageSizePresetDropdown();
             setField(oFormatRatio.a, currentResult.formatRatioHorizontal);
             setField(oFormatRatio.b, currentResult.formatRatioVertical);
 
@@ -9595,6 +10150,7 @@ sold or otherwise used without prior written permission from the copyright holde
         setCustomRatioControlsEnabled(false);
         setFontControlsEnabled(true);
         selectedFontMetrics = null;
+        lastSelectedFontMetrics = null;
         activateSelectedFontMetrics(false);
         exactLineSpaceMM = null;
         exactGridRows = null;
@@ -9699,6 +10255,7 @@ sold or otherwise used without prior written permission from the copyright holde
 
         try { typeLedFormat.value = !enabled; } catch (_) {}
         try { anamorphicFormat.value = enabled; } catch (_) {}
+        try { pageSizePresetDropdown.enabled = true; } catch (_) {}
         try { oPageWidth.enabled = enabled; } catch (_) {}
         try { oPageHeight.enabled = enabled; } catch (_) {}
         try { oFormatRatio.a.enabled = enabled; } catch (_) {}
@@ -9725,6 +10282,8 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
 
         try {
+            pageSizePresetDropdown.helpTip =
+                "Choose a standard InDesign page format to update Width and Height. Selecting a format switches to Custom Format.";
             oPageWidth.helpTip = enabled
                 ? "Editing Width changes the Horizontal Grid value “Grid Interval” while preserving the current horizontal page grid steps."
                 : "Choose Custom Format in Emetric Mode to edit Width.";
@@ -9954,6 +10513,10 @@ sold or otherwise used without prior written permission from the copyright holde
             };
         })(pageDimensionFields[pageDimensionIndex]);
     }
+
+    pageSizePresetDropdown.onChange = function () {
+        applyPageSizePresetSelection();
+    };
 
     function isPageRatioField(field) {
         return (
@@ -10476,6 +11039,10 @@ sold or otherwise used without prior written permission from the copyright holde
                 customRatioCapHeight.text + ":" +
                 customRatioXHeight.text + ":" +
                 customRatioDescender.text,
+            rowOffsetSourceIndex:
+                rowOffsetSource.selection
+                    ? Number(rowOffsetSource.selection.index)
+                    : 3,
             rowOffsetSourceName:
                 rowOffsetSource.selection
                     ? rowOffsetSource.selection.text
@@ -10490,6 +11057,8 @@ sold or otherwise used without prior written permission from the copyright holde
                     "selectedFont"
                 ),
             selectedFontRecord: selectedFontRecord(),
+            selectedFontMetrics:
+                selectedFontMetrics || lastSelectedFontMetrics,
             guideColor: guideColorSelector.getValue(),
             marginColor: marginColorSelector.getValue(),
             columnColor: columnColorSelector.getValue(),
@@ -11467,6 +12036,29 @@ sold or otherwise used without prior written permission from the copyright holde
 
         // Page and areas
         setTooltip(pPage, "Set or review the page dimensions and page ratio.");
+        setFieldTooltip(pageSizePresetDropdown, "Choose a standard InDesign page format to update Width and Height. Selecting a format switches to Custom Format.");
+        try {
+            for (var psi = 0; psi < pageSizePresetDropdown.items.length; psi++) {
+                var ps = pageSizePresetDropdown.items[psi].emetricPageSizePreset;
+                if (ps && ps.source !== "custom") {
+                    setTooltip(
+                        pageSizePresetDropdown.items[psi],
+                        "Set Page Size to " +
+                            ps.name +
+                            " (" +
+                            mmString(ps.widthMM) +
+                            " × " +
+                            mmString(ps.heightMM) +
+                            ")."
+                    );
+                } else {
+                    setTooltip(
+                        pageSizePresetDropdown.items[psi],
+                        "Keep the current custom Width and Height."
+                    );
+                }
+            }
+        } catch (_) {}
         setFieldTooltip(oPageWidth, activeAnamorphicMode()
             ? "Editing Width changes the Horizontal Grid Interval while preserving the current horizontal page grid steps."
             : "Choose Custom Format in Emetric Mode to edit Width.");

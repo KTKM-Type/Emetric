@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.23`
+> **Status:** Alpha — current source version `0.42.0-alpha.28`
 
 ## Main features
 
@@ -26,6 +26,8 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
 - Optional facing pages, A-Parent, index page, and placeholder text under Document Options
 - Color themes, presets, and diagnostic logging
+- When non-font metric sources are used, the selected font is scaled against the active Vertical Grid Alignment metric for Placeholder Text / [Basic Paragraph]
+- Ascender alignment uses the visible lowercase ascender outline so grid alignment follows the actual upstroke top
 - Creation of native InDesign guides, margins, columns, grids, and paragraph styles
 
 ## Repository structure
@@ -71,3 +73,10 @@ Copyright © 2012–2026 Kristian Möller, KTKM Design AB.
 ### 0.42.0-alpha.23 notes
 
 This iteration keeps Placeholder Text on **[Basic Paragraph]**, sets its paragraph direction to **Left-to-Right**, sets **[Basic Paragraph]** to **Align Left**, and keeps its language aligned with the default InDesign language. The visible **Metrics & Leading Ratio** label is shortened to **M & L Ratio** while the full tooltip remains.
+
+
+## 0.42.0-alpha.28
+
+- **Vertical Grid → Alignment → Ascender** now explicitly uses the visible **Type Size → Ascender** value.
+- The same Type Size alignment measure is used for the baseline grid, Placeholder Text first baseline, Emetric Data text frame, and basic text-frame default.
+- Page Size Format keeps named standard choices such as A4 instead of reverting to InDesign’s generic **[Default]** preset when dimensions are identical.
