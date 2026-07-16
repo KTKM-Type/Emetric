@@ -1,4 +1,10 @@
 # Changelog
+## 0.42.0-alpha.24
+
+- Scaled the selected font for Placeholder Text / [Basic Paragraph] when Metric Source is **Emetric Decimal**, **Emetric Dozenal**, or **Custom Metric**.
+- The selected font now follows the active **Vertical Grid → Alignment** metric: Metrics, Ascender, Cap Height, or x-Height.
+- Kept the selected font as the output font even when the metric source is not **Selected Font**.
+
 ## 0.42.0-alpha.23
 
 - Set [Basic Paragraph] to Align Left for Placeholder Text output.

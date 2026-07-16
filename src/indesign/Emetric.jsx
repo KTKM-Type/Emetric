@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.23, 2026
+Version 0.42.0-alpha.24, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.23";
+    var VERSION = "0.42.0-alpha.24";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -479,6 +479,7 @@ sold or otherwise used without prior written permission from the copyright holde
     };
 
     var selectedFontMetrics = null;
+    var lastSelectedFontMetrics = null;
     var installedFontRecords = [];
     var installedFontFamilies = [];
     var fontSelectionIsUpdating = false;
@@ -2751,14 +2752,75 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
     }
 
+    function metricMeasureForAlignment(result, sourceIndex) {
+        if (!result) return null;
+
+        if (sourceIndex === 0) return result.metrics;
+        if (sourceIndex === 1) return Math.abs(result.ascender);
+        if (sourceIndex === 2) return Math.abs(result.uppercase);
+        if (sourceIndex === 3) return Math.abs(result.lowercase);
+
+        return result.metrics;
+    }
+
+    function fontMetricRatioForAlignment(fontMetrics, sourceIndex) {
+        if (!fontMetrics) return null;
+
+        var emSize = Number(fontMetrics.unitsPerEm);
+        if (!(emSize > 0)) return null;
+
+        if (sourceIndex === 0) return 1;
+        if (sourceIndex === 1) return Math.abs(Number(fontMetrics.ascender)) / emSize;
+        if (sourceIndex === 2) return Math.abs(Number(fontMetrics.capHeight)) / emSize;
+        if (sourceIndex === 3) return Math.abs(Number(fontMetrics.xHeight)) / emSize;
+
+        return 1;
+    }
+
+    function adjustedSelectedFontSizeMM(result, options) {
+        var fallbackSize = result ? result.metrics : 0;
+        var fontMetrics = options ? options.selectedFontMetrics : null;
+
+        if (!result || !fontMetrics) {
+            return fallbackSize;
+        }
+
+        var alignmentIndex = options.rowOffsetSourceIndex;
+
+        if (
+            alignmentIndex === null ||
+            alignmentIndex === undefined
+        ) {
+            alignmentIndex = 3;
+        }
+
+        var targetMeasure = metricMeasureForAlignment(
+            result,
+            Number(alignmentIndex)
+        );
+        var fontRatio = fontMetricRatioForAlignment(
+            fontMetrics,
+            Number(alignmentIndex)
+        );
+
+        if (!(targetMeasure > 0) || !(fontRatio > 0)) {
+            return fallbackSize;
+        }
+
+        return targetMeasure / fontRatio;
+    }
+
     function applyDocumentDefaultStyles(doc, r, options) {
         var fontRecord = options.selectedFontRecord || null;
-        var pointSize = exportPointValue(r.metrics, options.unitIndex);
+        var adjustedFontSizeMM = adjustedSelectedFontSizeMM(r, options);
+        var pointSize = exportPointValue(adjustedFontSizeMM, options.unitIndex);
         var leading = exportPointValue(r.lineSpace, options.unitIndex);
         var defaultLanguage = getDefaultInDesignLanguage(doc);
 
         // Document text defaults control the actual font and size used
-        // when new text is created without an explicit style.
+        // when new text is created without an explicit style. When Metric Source
+        // is not Selected Font, the selected font is optically scaled so the
+        // active Vertical Grid Alignment metric matches the Type Size value.
         try {
             var defaults = doc.textDefaults;
 
@@ -9134,6 +9196,7 @@ sold or otherwise used without prior written permission from the copyright holde
             var emSize = Number(data.unitsPerEm);
 
             selectedFontMetrics = data;
+            lastSelectedFontMetrics = data;
             setTypeRatios({
                 ascender: Number(data.ascender) / emSize,
                 capHeight: Number(data.capHeight) / emSize,
@@ -9595,6 +9658,7 @@ sold or otherwise used without prior written permission from the copyright holde
         setCustomRatioControlsEnabled(false);
         setFontControlsEnabled(true);
         selectedFontMetrics = null;
+        lastSelectedFontMetrics = null;
         activateSelectedFontMetrics(false);
         exactLineSpaceMM = null;
         exactGridRows = null;
@@ -10476,6 +10540,10 @@ sold or otherwise used without prior written permission from the copyright holde
                 customRatioCapHeight.text + ":" +
                 customRatioXHeight.text + ":" +
                 customRatioDescender.text,
+            rowOffsetSourceIndex:
+                rowOffsetSource.selection
+                    ? Number(rowOffsetSource.selection.index)
+                    : 3,
             rowOffsetSourceName:
                 rowOffsetSource.selection
                     ? rowOffsetSource.selection.text
@@ -10490,6 +10558,8 @@ sold or otherwise used without prior written permission from the copyright holde
                     "selectedFont"
                 ),
             selectedFontRecord: selectedFontRecord(),
+            selectedFontMetrics:
+                selectedFontMetrics || lastSelectedFontMetrics,
             guideColor: guideColorSelector.getValue(),
             marginColor: marginColorSelector.getValue(),
             columnColor: columnColorSelector.getValue(),
