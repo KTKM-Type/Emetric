@@ -1,5 +1,3 @@
-![Emetric](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png)
-
 # Emetric
 
 A typographic proportioning tool for creating type-based document grids, margins, and modular layouts in Adobe InDesign.
@@ -7,6 +5,8 @@ A typographic proportioning tool for creating type-based document grids, margins
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
 > **Status:** Beta — current source version `0.42.0-beta.1`
+
+![Emetric](https://github.com/KTKM-Type/Emetric/blob/main/docs/img/emetric-full.png)
 
 ## Main features
 
