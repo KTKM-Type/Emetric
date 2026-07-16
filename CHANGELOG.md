@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.42.0-alpha.32
+
+- Changed **Custom Metric** to use the existing **Type Size** fields as manual metric values instead of expanding a separate Custom Metric field group.
+- Type Size values are independent in Custom Metric: editing Metrics, Ascender, Cap Height, x-Height, or Descender no longer recalculates the other Type Size fields.
+- **Vertical Grid → Alignment** now reads the corresponding Type Size value directly when Custom Metric is selected; for example, Ascender alignment uses **Type Size → Ascender** as the first-baseline offset from the top margin.
+- Custom Format no longer overwrites manual Type Size values when Custom Metric is selected.
+- Removing the Custom Metric expand/collapse flow should reduce ScriptUI reflow issues in the Colors panel.
+
+## 0.42.0-alpha.29
+
+- Split numeric field formatting into separate UI and internal precision helpers.
+- Visible editable UI values now normalize to three decimals.
+- Added an internal high-precision formatter for cases where text output needs to preserve up to eight decimals.
+- Initial numeric field values now pass through the UI formatter for consistent comma decimals and three-decimal display.
+
 ## 0.42.0-alpha.28
 
 - Changed Ascender alignment to measure the visible lowercase ascender stems from temporary outlines.
