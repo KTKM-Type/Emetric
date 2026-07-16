@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.0-alpha.30
+
+- Fixed Colors panel label alignment after switching Metric Source.
+- Reapplied fixed row geometry for Color Theme, Guides, Margins, Columns, Baseline Grid, and Document Grid.
+- Preserved HEX input and swatch preview widths during Custom Metric expand/collapse layout updates.
+
 ## 0.42.0-alpha.29
 
 - Split numeric field formatting into separate UI and internal precision helpers.

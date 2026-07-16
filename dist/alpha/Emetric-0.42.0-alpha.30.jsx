@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.29, 2026
+Version 0.42.0-alpha.30, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.29";
+    var VERSION = "0.42.0-alpha.30";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -829,12 +829,15 @@ sold or otherwise used without prior written permission from the copyright holde
             UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
         colorRowSpacer.minimumSize.width =
             UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
+        colorRowSpacer.maximumSize.width =
+            UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
 
         var selector = {
             group: group,
             label: caption,
             preview: preview,
             hexField: hexField,
+            spacer: colorRowSpacer,
             hex: normalizeHex(defaultHex),
             onUserChange: null,
             suppressChange: false
@@ -1842,6 +1845,7 @@ sold or otherwise used without prior written permission from the copyright holde
         labelGroup.preferredSize.width = labelWidth;
         labelGroup.minimumSize.width = labelWidth;
         labelGroup.maximumSize.width = labelWidth;
+        try { labelGroup.emetricFieldLabelWidth = labelWidth; } catch (_) {}
 
         var control =
             labelGroup.add(
@@ -1851,8 +1855,51 @@ sold or otherwise used without prior written permission from the copyright holde
             );
         try { control.justify = "right"; } catch (_) {}
         control.alignment = ["right", "center"];
+        try { control.emetricLabelGroup = labelGroup; } catch (_) {}
+        try { control.emetricFieldLabelWidth = labelWidth; } catch (_) {}
 
         return control;
+    }
+
+    function lockFieldLabelLayout(labelControl, requestedWidth) {
+        if (!labelControl) return;
+
+        var labelWidth =
+            requestedWidth ||
+            labelControl.emetricFieldLabelWidth ||
+            UI_LABEL_WIDTH;
+
+        try { labelControl.justify = "right"; } catch (_) {}
+        try { labelControl.alignment = ["right", "center"]; } catch (_) {}
+
+        try {
+            var labelGroup =
+                labelControl.emetricLabelGroup ||
+                labelControl.parent;
+
+            if (labelGroup) {
+                labelGroup.orientation = "row";
+                labelGroup.alignChildren = ["right", "center"];
+                labelGroup.alignment = ["left", "center"];
+                labelGroup.spacing = 0;
+                labelGroup.margins = [0, 0, 0, 0];
+                labelGroup.preferredSize.width = labelWidth;
+                labelGroup.minimumSize.width = labelWidth;
+                labelGroup.maximumSize.width = labelWidth;
+            }
+        } catch (_) {}
+    }
+
+    function lockFieldRowLayout(row) {
+        if (!row) return;
+
+        try {
+            row.orientation = "row";
+            row.alignChildren = ["left", "center"];
+            row.alignment = ["left", "center"];
+            row.spacing = UI_LABEL_FIELD_GAP;
+            row.margins = [0, 0, 0, 0];
+        } catch (_) {}
     }
 
     function addSection(parent, title) {
@@ -9270,11 +9317,78 @@ sold or otherwise used without prior written permission from the copyright holde
         }
     }
 
+    function lockColorSelectorLayout(selector) {
+        if (!selector) return;
+
+        try { lockFieldRowLayout(selector.group); } catch (_) {}
+        try { lockFieldLabelLayout(selector.label); } catch (_) {}
+
+        try {
+            selector.hexField.preferredSize.width = UI_FIELD_WIDTH;
+            selector.hexField.minimumSize.width = UI_FIELD_WIDTH;
+            selector.hexField.maximumSize.width = UI_FIELD_WIDTH;
+        } catch (_) {}
+
+        try {
+            selector.preview.preferredSize = [18, 18];
+            selector.preview.minimumSize = [18, 18];
+            selector.preview.maximumSize = [18, 18];
+            selector.preview.alignment = ["left", "center"];
+        } catch (_) {}
+
+        try {
+            selector.spacer.preferredSize.width =
+                UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
+            selector.spacer.minimumSize.width =
+                UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
+            selector.spacer.maximumSize.width =
+                UI_FIELD_WIDTH + UI_UNIT_WIDTH - 14;
+        } catch (_) {}
+    }
+
+    function lockColorPanelLayout() {
+        // Metric Source changes expand/collapse the Custom Metric controls.
+        // ScriptUI can then recalculate the following Colors panel and lose
+        // right-aligned label layout. Reapply fixed row geometry explicitly.
+        var selectors = [
+            guideColorSelector,
+            marginColorSelector,
+            columnColorSelector,
+            baselineGridColorSelector,
+            documentGridColorSelector
+        ];
+
+        try {
+            colorPanel.alignChildren = ["fill", "top"];
+            colorPanel.preferredSize.width = UI_COLUMN_WIDTH;
+            colorPanel.minimumSize.width = UI_COLUMN_WIDTH;
+            colorPanel.maximumSize.width = UI_COLUMN_WIDTH;
+        } catch (_) {}
+
+        try {
+            lockFieldRowLayout(profileRow);
+            lockFieldLabelLayout(profileLabel);
+            colorProfileDropdown.preferredSize.width = UI_FIELD_WIDTH * 2 + 8;
+            colorProfileDropdown.minimumSize.width = UI_FIELD_WIDTH * 2 + 8;
+            colorProfileDropdown.maximumSize.width = UI_FIELD_WIDTH * 2 + 8;
+            profileRowSpacer.preferredSize.width = UI_UNIT_WIDTH;
+            profileRowSpacer.minimumSize.width = UI_UNIT_WIDTH;
+            profileRowSpacer.maximumSize.width = UI_UNIT_WIDTH;
+        } catch (_) {}
+
+        for (var i = 0; i < selectors.length; i++) {
+            lockColorSelectorLayout(selectors[i]);
+        }
+    }
+
     function refreshColorHexFieldsAfterLayout() {
         // ScriptUI can drop edittext painting in the lower color rows after
         // the Custom Metric controls expand/collapse. Rewriting and briefly
         // toggling the fields keeps Baseline Grid and Document Grid HEX values
-        // visible.
+        // visible. The same reflow can also left-align the color labels, so
+        // lock the Colors row geometry before repainting.
+        lockColorPanelLayout();
+
         var selectors = [
             guideColorSelector,
             marginColorSelector,
@@ -9309,6 +9423,7 @@ sold or otherwise used without prior written permission from the copyright holde
         }
 
         try {
+            lockColorPanelLayout();
             colorPanel.layout.layout(true);
         } catch (_) {}
 
@@ -9342,12 +9457,17 @@ sold or otherwise used without prior written permission from the copyright holde
         } catch (_) {}
 
         try {
+            lockColorPanelLayout();
+        } catch (_) {}
+
+        try {
             // A single top-level layout/resize pass avoids the visible
             // repaint sequence caused by updating each nested container.
             w.layout.layout(true);
             w.layout.resize();
         } catch (_) {}
 
+        lockColorPanelLayout();
         refreshColorHexFieldsAfterLayout();
     }
 
