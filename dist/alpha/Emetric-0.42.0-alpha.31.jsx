@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-alpha.30, 2026
+Version 0.42.0-alpha.31, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ sold or otherwise used without prior written permission from the copyright holde
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-alpha.30";
+    var VERSION = "0.42.0-alpha.31";
     var RELEASE_STATUS = "ALPHA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -1853,8 +1853,18 @@ sold or otherwise used without prior written permission from the copyright holde
                 undefined,
                 fieldLabelText(label)
             );
+
+        // Keep the text control itself as wide as the label column.
+        // The previous wrapper-only approach could be recalculated by
+        // ScriptUI when Metric Source expanded/collapsed Custom Metric,
+        // which made Colors labels appear left-aligned. A fixed-width
+        // statictext with right justification keeps the visual alignment
+        // even if the wrapper group is reflowed by InDesign.
+        try { control.preferredSize.width = labelWidth; } catch (_) {}
+        try { control.minimumSize.width = labelWidth; } catch (_) {}
+        try { control.maximumSize.width = labelWidth; } catch (_) {}
         try { control.justify = "right"; } catch (_) {}
-        control.alignment = ["right", "center"];
+        control.alignment = ["fill", "center"];
         try { control.emetricLabelGroup = labelGroup; } catch (_) {}
         try { control.emetricFieldLabelWidth = labelWidth; } catch (_) {}
 
@@ -1869,8 +1879,11 @@ sold or otherwise used without prior written permission from the copyright holde
             labelControl.emetricFieldLabelWidth ||
             UI_LABEL_WIDTH;
 
+        try { labelControl.preferredSize.width = labelWidth; } catch (_) {}
+        try { labelControl.minimumSize.width = labelWidth; } catch (_) {}
+        try { labelControl.maximumSize.width = labelWidth; } catch (_) {}
         try { labelControl.justify = "right"; } catch (_) {}
-        try { labelControl.alignment = ["right", "center"]; } catch (_) {}
+        try { labelControl.alignment = ["fill", "center"]; } catch (_) {}
 
         try {
             var labelGroup =
@@ -9322,6 +9335,16 @@ sold or otherwise used without prior written permission from the copyright holde
 
         try { lockFieldRowLayout(selector.group); } catch (_) {}
         try { lockFieldLabelLayout(selector.label); } catch (_) {}
+
+        try {
+            var colorLabelWidth =
+                selector.label.emetricFieldLabelWidth || UI_LABEL_WIDTH;
+            selector.label.preferredSize.width = colorLabelWidth;
+            selector.label.minimumSize.width = colorLabelWidth;
+            selector.label.maximumSize.width = colorLabelWidth;
+            selector.label.justify = "right";
+            selector.label.alignment = ["fill", "center"];
+        } catch (_) {}
 
         try {
             selector.hexField.preferredSize.width = UI_FIELD_WIDTH;

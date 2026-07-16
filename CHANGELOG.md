@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.42.0-alpha.30
+## 0.42.0-alpha.31
 
-- Fixed Colors panel label alignment after switching Metric Source.
+- Strengthened Colors panel label alignment after switching Metric Source.
+- Fixed-width label text controls now keep right alignment even when ScriptUI recalculates wrapper groups during Custom Metric expand/collapse.
 - Reapplied fixed row geometry for Color Theme, Guides, Margins, Columns, Baseline Grid, and Document Grid.
-- Preserved HEX input and swatch preview widths during Custom Metric expand/collapse layout updates.
+- Preserved HEX input and swatch preview widths during Metric Source layout updates.
 
 ## 0.42.0-alpha.29
 

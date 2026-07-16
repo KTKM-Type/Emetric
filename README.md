@@ -4,7 +4,7 @@ A typographic proportioning tool for creating type-based document grids, margins
 
 Emetric translates typographic proportions into document geometry. It can derive measurements from a selected font or from predefined and custom metric systems, then use those values to create an InDesign document with margins, modules, guides, grids, and optional reference pages.
 
-> **Status:** Alpha — current source version `0.42.0-alpha.30`
+> **Status:** Alpha — current source version `0.42.0-alpha.31`
 
 ## Main features
 
@@ -26,6 +26,7 @@ Emetric translates typographic proportions into document geometry. It can derive
 - Millimeters, points, picas, ciceros, Didot points, Edo, and Edo points
 - Optional facing pages, A-Parent, index page, and placeholder text under Document Options
 - Color themes, presets, and diagnostic logging
+- Colors panel labels use fixed-width right-aligned controls to withstand ScriptUI reflow when Metric Source changes
 - When non-font metric sources are used, the selected font is scaled against the active Vertical Grid Alignment metric for Placeholder Text / [Basic Paragraph]
 - Ascender alignment uses the visible lowercase ascender outline so grid alignment follows the actual upstroke top
 - Creation of native InDesign guides, margins, columns, grids, and paragraph styles
@@ -81,7 +82,7 @@ This iteration keeps Placeholder Text on **[Basic Paragraph]**, sets its paragra
 - The same Type Size alignment measure is used for the baseline grid, Placeholder Text first baseline, Emetric Data text frame, and basic text-frame default.
 - Page Size Format keeps named standard choices such as A4 instead of reverting to InDesign’s generic **[Default]** preset when dimensions are identical.
 
-## 0.42.0-alpha.30
+## 0.42.0-alpha.31
 
 - Locked the Colors panel row and label geometry after Metric Source changes.
 - Reapplies right-aligned color labels when Custom Metric controls expand or collapse.
