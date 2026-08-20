@@ -18,6 +18,7 @@ This roadmap is intentionally lightweight during public beta.
 - Switching orientation should swap Width and Height.
 - Page Ratio, guides and preview should update consistently.
 - Orientation should work for preset formats and manual Custom Format values.
+- Adobe-style Portrait/Landscape pictograms already traced to SVG are available at `docs/icons/Horizontal@16x16.svg` and `docs/icons/Vertical@16x16.svg`, ready to redraw as a custom ScriptUI button cluster the same way `drawSavePresetPictogram()`/`drawDeletePresetPictogram()` were (see `docs/maintenance-notes.md`, item 6) — ScriptUI has no native orientation-cluster widget.
 
 ### Public beta feedback
 
