@@ -4,6 +4,26 @@ All notable changes to Emetric are recorded here.
 
 The project uses semantic versioning with prerelease identifiers such as `alpha`, `beta` and `rc`.
 
+## Unreleased
+
+## 0.42.0-beta.2 — Stability and preset fixes
+
+### Fixed
+
+- Clicking **Create Document** could feel noticeably slower or less consistent than the Live Preview updates leading up to it. `performPreviewUpdate()` already disables screen redraw (`app.scriptPreferences.enableRedraw`) while it builds the preview document, but `createButton.onClick()` built the final document — the same layers/guides/styles/text-frame work — without that toggle, repainting the screen on every step. It now disables redraw for the same span and restores it afterward, matching the preview path.
+- The **Save Preset** icon (and Delete Preset) could become nearly invisible in its disabled state under the **Medium Dark** UI brightness setting. The icon control has no fill of its own to sample a real background from, so its disabled-state color blend fell back to a hardcoded guess that only distinguished two tones (dark-family / light-family) instead of Adobe's four UI brightness levels; Medium Dark's real panel tone is lighter than Dark's, so the guess undershot it. The fallback now reuses the same per-theme measured tones already used for the icon's hover highlight, giving Medium Dark (and Medium Light) their own distinct value instead of being lumped in with Dark/Light.
+- **Vertical Grid → Grid Guides** (the major grid-row guides drawn by `addBoundaryGuides()`) measured their starting position from the margin instead of from the page's top edge. This page-anchored reference grid is meant to combine with **Horizontal Grid**'s equivalent Grid Guides into a plain rectangular grid across the whole page format; it now starts one Grid Module Height (Steps × Grid Interval) down from the page edge, plus the Offset needed to compensate for the vertical ruler-zero shift `setupDocumentAndBaselineGrids()` applies for the document grid, instead of drifting with the margin and Vertical Grid Alignment settings.
+- A `presets.json` file that could not be read (locked by cloud sync, a permission hiccup, or truncated by a prior crash) no longer causes Emetric to silently overwrite it with an empty preset store on the next autosave. The unreadable file is now backed up next to itself as `presets-unreadable-<timestamp>.json` and the failure is reported through the diagnostic log and an alert instead of failing silently.
+- The **Emetric Data** page's "Ratios:" line now reflects the actual Type Size values used when Metric Source is Custom Metric, instead of a disconnected, hidden set of legacy fields that no longer tracked user edits after the `0.42.0-alpha.32` Custom Metric redesign.
+- The **Save Preset** and **Delete Preset** pictograms are now drawn from Adobe's actual icon geometry, traced from a Figma export of Adobe's own pictograms, instead of an approximation built out of plain rectangles. Confirmed against InDesign: Save's tray notch renders as a real cut-out; Delete's handle and bin body are each one rounded, open outline (no enclosed hole cut, so nothing relies on a fill winding rule) with the ribs and lid as plain filled rectangles, matching Adobe's rounded corners and rib clearance instead of reading as blocky.
+- The **Default** preset (and any saved preset whose Metric Source is Selected Font with a font that isn't installed) no longer permanently shows as "— Modified" with no user edits. Ascender/Cap Height/x-Height/Descender are live, font-measurement-based display values in that mode, not saved numbers, so a silently substituted fallback font naturally measured differently from the preset's original font and tripped the dirty check; those four values are now excluded from it for Selected Font presets, while Font Family/Font Style still compare normally.
+- **Reset** now always re-selects a font instead of silently leaving whatever font was previously chosen selected. Previously, picking a different font and then pressing Reset kept that font active rather than returning to Default's own font, which is what made the fix above look incomplete — Font Family is genuinely compared, so a leftover font correctly kept showing "Modified". The preferred-font list Reset picks from is now `Afacad`, `Afacad Pro`, `Afacad Flux`, `A Garamond`, `Minion`, `Minion Pro`, `Times`, `Times New`, `Comic Sans`, in that order, matched by "starts with" (so "Times New" also matches an installed "Times New Roman", "Minion" also matches "Minion Pro", etc.), falling back to the first installed font alphabetically if none of those are present.
+
+### Changed
+
+- Removed seven internal helper functions with zero remaining call sites (`currentUnitSuffix`, `formatInternalInputNumber`, `toPoints`, `styleFieldLabel`, `addSubheading`, `addNote`, `presetBackgroundLuminance`); no behavior change.
+- Added `docs/architecture.md` (a map of the source file's structure and data flow) and `docs/maintenance-notes.md` (the fixes above, plus dead-state variables that were found but intentionally left in place pending an InDesign-tested follow-up or a maintainer decision).
+
 ## 0.42.0-beta.1 — Public beta
 
 ### Added

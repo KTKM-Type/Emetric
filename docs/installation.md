@@ -9,7 +9,7 @@ Emetric is distributed as an Adobe InDesign ExtendScript file.
 3. Locate:
 
 ```text
-dist/beta/Emetric-0.42.0-beta.1.jsx
+dist/beta/Emetric-0.42.0-beta.2.jsx
 ```
 
 4. Open Adobe InDesign.
@@ -38,7 +38,7 @@ The exact folder can vary depending on InDesign version, language and installati
 1. Open InDesign.
 2. Go to **Window → Utilities → Scripts**.
 3. Right-click **User** and choose **Reveal in Finder** or **Reveal in Explorer**.
-4. Copy `Emetric-0.42.0-beta.1.jsx` into that folder.
+4. Copy `Emetric-0.42.0-beta.2.jsx` into that folder.
 5. Return to InDesign and double-click the script in the Scripts panel.
 
 ## Beta recommendation

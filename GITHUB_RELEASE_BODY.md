@@ -1,15 +1,13 @@
-# Emetric 0.42.0-beta.1 — Public Beta
+# Emetric 0.42.0-beta.2 — Stability and Preset Fixes
 
-First public beta of **Emetric**, a typographic proportioning tool for Adobe InDesign.
-
-Emetric creates type-based document geometry: page size, margins, modular grids, guide systems, baseline grid, placeholder text and optional Emetric Data pages.
+A follow-up to the first public beta of **Emetric**, a typographic proportioning tool for Adobe InDesign. No new features — this release fixes bugs reported during beta.1 testing.
 
 ## Download
 
 Download the release asset ZIP, unzip it and run:
 
 ```text
-Emetric-0.42.0-beta.1.jsx
+Emetric-0.42.0-beta.2.jsx
 ```
 
 ## Screenshots
@@ -20,16 +18,17 @@ Emetric-0.42.0-beta.1.jsx
 
 ![Compact View in InDesign](docs/img/emetric-compact-default.png)
 
-## Highlights
+## Fixed since beta.1
 
-- Selected Font, Emetric Decimal, Emetric Dozenal and Custom Metric sources.
-- Custom Metric uses Type Size fields as manual independent metric values.
-- Page Size format selector for A4, A3, Letter and other common formats.
-- Custom Format for editable page dimensions and grid structure.
-- Compact View for quick iteration.
-- Optional Placeholder Text and Emetric Data page.
-- Local preset storage.
-- Manual beta test checklist.
+- **Create Document** now disables screen redraw the same way Live Preview already does, so it no longer feels slower or less consistent.
+- The **Save Preset** / **Delete Preset** icons no longer become nearly invisible when disabled under the **Medium Dark** UI brightness setting.
+- **Vertical Grid → Grid Guides** now measures from the page's top edge instead of drifting with margin/alignment settings.
+- An unreadable `presets.json` is now backed up and reported instead of being silently overwritten.
+- The **Emetric Data** page's "Ratios:" line reflects the actual Custom Metric Type Size values.
+- The **Save Preset** and **Delete Preset** pictograms now match Adobe's real icon geometry (rounded corners, tray notch, rib clearance).
+- The **Default** preset no longer permanently shows "— Modified" when its font isn't installed; **Reset** now reliably re-selects a sensible font (Afacad, Afacad Pro, Afacad Flux, A Garamond, Minion, Minion Pro, Times, Times New, Comic Sans, matched by "starts with", falling back to the first installed font).
+
+See [`CHANGELOG.md`](CHANGELOG.md) and [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for full details.
 
 ## Beta feedback wanted
 

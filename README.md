@@ -2,7 +2,7 @@
 
 **Emetric** is a typographic proportioning tool for Adobe InDesign. It turns type metrics into document geometry: page size, margins, grids, modules, guides, baseline grid, and optional reference pages.
 
-> Current version: **0.42.0-beta.1**  
+> Current version: **0.42.0-beta.2**  
 > Status: **Public beta**  
 > License: **Emetric Beta License** — source-available, not open source.
 
@@ -37,7 +37,7 @@ Core uses:
 
 ![Emetric compact view with InDesign document preview](docs/img/emetric-compact-default.png)
 
-## Main features in 0.42.0-beta.1
+## Main features in 0.42.0-beta.2
 
 - **Metric Source**: Selected Font, Emetric Decimal, Emetric Dozenal, Custom Metric.
 - **Custom Metric** uses the existing **Type Size** fields as manual, independent values.
@@ -60,7 +60,7 @@ Core uses:
 4. Run:
 
 ```text
-Emetric-0.42.0-beta.1.jsx
+Emetric-0.42.0-beta.2.jsx
 ```
 
 Recommended installation paths are documented in [`docs/installation.md`](docs/installation.md).
@@ -91,7 +91,7 @@ src/indesign/Emetric.jsx
 The versioned file for this beta is:
 
 ```text
-dist/beta/Emetric-0.42.0-beta.1.jsx
+dist/beta/Emetric-0.42.0-beta.2.jsx
 ```
 
 ## Presets and local data
@@ -131,6 +131,10 @@ The next planned areas are documented in [`docs/roadmap.md`](docs/roadmap.md), i
 - Japanese **Q** unit support;
 - portrait/landscape orientation switching;
 - continued beta feedback and stability fixes.
+
+## Architecture and maintenance notes
+
+`src/indesign/Emetric.jsx` is a single ~12,500-line ExtendScript file (ExtendScript has no module system, so it can't be split at runtime). [`docs/architecture.md`](docs/architecture.md) maps its structure and data flow; [`docs/maintenance-notes.md`](docs/maintenance-notes.md) tracks fixes from the latest stability review, plus a few dead-state variables that were found but intentionally left in place pending further testing.
 
 ## License
 
