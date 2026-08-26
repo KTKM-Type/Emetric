@@ -1,4 +1,4 @@
-# Emetric 0.42.0-beta.2 — Manual Test Checklist
+# Emetric 0.42.0-beta.3 — Manual Test Checklist
 
 Use this checklist as the baseline for wider beta testing in Adobe InDesign.
 
@@ -10,8 +10,8 @@ Use this checklist as the baseline for wider beta testing in Adobe InDesign.
 | Date |  |
 | Operating system |  |
 | Adobe InDesign version |  |
-| Emetric version | 0.42.0-beta.2 |
-| Script file tested | `dist/beta/Emetric-0.42.0-beta.2.jsx` |
+| Emetric version | 0.42.0-beta.3 |
+| Script file tested | `dist/beta/Emetric-0.42.0-beta.3.jsx` |
 | Font used for main test |  |
 | Notes / screenshots link |  |
 
@@ -23,9 +23,9 @@ Use the checkboxes directly or mark each item with `PASS`, `FAIL`, `N/A`, or `NE
 
 ## 1. Installation and launch
 
-- [ ] Copy or run `Emetric-0.42.0-beta.2.jsx` in Adobe InDesign.
+- [ ] Copy or run `Emetric-0.42.0-beta.3.jsx` in Adobe InDesign.
 - [ ] The Emetric dialog opens without an ExtendScript error.
-- [ ] The window title shows `Emetric 0.42.0-beta.2` and beta status.
+- [ ] The window title shows `Emetric 0.42.0-beta.3` and beta status.
 - [ ] The UI appears in three main columns plus the bottom control bar.
 - [ ] Closing and reopening the script works without restarting InDesign.
 - [ ] No unexpected document is created before pressing **Create Document**.
@@ -367,7 +367,7 @@ On macOS this usually resolves to approximately:
 ### Error report template
 
 ```text
-Emetric version: 0.42.0-beta.2
+Emetric version: 0.42.0-beta.3
 InDesign version:
 Operating system:
 Font:
@@ -382,13 +382,13 @@ Preset file attached: Yes/No
 
 ---
 
-## 14. Known backlog / not required for beta.2 pass
+## 14. Known backlog / not required for beta.3 pass
 
-These items are noted for a future version and should not fail beta.2 unless they break existing behavior.
+These items are noted for a future version and should not fail beta.3 unless they break existing behavior.
 
-- [ ] Additional units such as Japanese Q are not expected in beta.2.
-- [ ] Portrait/Landscape orientation switching is not expected in beta.2.
-- [ ] Wider localization or translated UI is not expected in beta.2.
+- [ ] Additional units such as Japanese Q are not expected in beta.3.
+- [ ] Portrait/Landscape orientation switching is not expected in beta.3.
+- [ ] Wider localization or translated UI is not expected in beta.3.
 
 ---
 

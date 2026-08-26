@@ -2,7 +2,7 @@
 
 This is a map of `src/indesign/Emetric.jsx`, written to make the file
 faster to navigate. It reflects the structure as of version
-`0.42.0-beta.2`, which includes the stability fixes described in
+`0.42.0-beta.3`, which includes the stability fixes described in
 [`CHANGELOG.md`](../CHANGELOG.md). Line numbers will drift
 as the file changes; treat them as "approximately here", not exact
 addresses.

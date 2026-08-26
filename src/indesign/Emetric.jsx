@@ -4,7 +4,7 @@
 /*
 Emetric — source
 File: src/indesign/Emetric.jsx
-Version 0.42.0-beta.2, 2026
+Version 0.42.0-beta.3, 2026
 
 A typographic proportioning tool for creating type-based document grids,
 margins and modular layouts in Adobe InDesign.
@@ -25,7 +25,7 @@ Commercial licensing may be introduced for future stable releases.
     // same version information. Set RELEASE_STATUS to an empty string for a
     // stable release.
     var APP_NAME = "Emetric";
-    var VERSION = "0.42.0-beta.2";
+    var VERSION = "0.42.0-beta.3";
     var RELEASE_STATUS = "BETA";
     var SCRIPT_NAME =
         APP_NAME +
@@ -484,6 +484,7 @@ Commercial licensing may be introduced for future stable releases.
     var installedFontFamilies = [];
     var fontSelectionIsUpdating = false;
     var fontUnitsPerEmCache = {};
+    var fontDesignMetricsCache = {};
 
     var PRESET_FORMAT_VERSION = 1;
     var PRESET_FOLDER_NAME = "Emetric";
@@ -634,10 +635,22 @@ Commercial licensing may be introduced for future stable releases.
         // 1 pica = 12 points -> 1p0
         // 1 cicero = 12 Didot points -> 1c0
         // 1 Edo = 12 Edo Points -> 1e0
-        var prefix =
-            unitIndex === 2 ? "p" :
-            unitIndex === 3 ? "c" :
-            "e";
+        //
+        // Written as explicit if/else (rather than a nested ternary) --
+        // Picas were displaying correctly computed values labelled with a
+        // "c" (Cicero) instead of "p", despite unitIndex being confirmed
+        // (via diagnostic log) to be genuinely 2 (Picas) at the moment the
+        // bug was visible. This rewrite resolved it under testing.
+        var prefix;
+
+        if (unitIndex === 2) {
+            prefix = "p";
+        } else if (unitIndex === 3) {
+            prefix = "c";
+        } else {
+            prefix = "e";
+        }
+
         var sign = value < 0 ? "-" : "";
         var absoluteValue = Math.abs(value);
 
@@ -1142,15 +1155,38 @@ Commercial licensing may be introduced for future stable releases.
         }
 
         if (unitIndex === 2 || unitIndex === 3 || unitIndex === 5) {
-            var marker =
-                unitIndex === 2 ? "p" :
-                unitIndex === 3 ? "c" :
-                "e";
-            var parts = text.toLowerCase().split(marker);
+            // Written as explicit if/else (rather than a nested ternary)
+            // and using indexOf/substring (rather than split) -- diagnostic
+            // logging proved this exact function was returning the
+            // fallback value instead of the parsed one for plain compound
+            // input like "1p0" under Picas (see CHANGELOG.md), the same
+            // symptom shape as the earlier, confirmed-fixed "p"/"c" letter
+            // bug in formatInDesignCompoundUnit(), which had the same
+            // nested-ternary pattern this one still had.
+            var marker;
 
-            if (parts.length === 2) {
-                var whole = parseNumber(parts[0], 0);
-                var points = parseNumber(parts[1], 0);
+            if (unitIndex === 2) {
+                marker = "p";
+            } else if (unitIndex === 3) {
+                marker = "c";
+            } else {
+                marker = "e";
+            }
+
+            var lowerText = text.toLowerCase();
+            var markerIndex = lowerText.indexOf(marker);
+
+            // Equivalent to the previous split(marker).length === 2 check:
+            // exactly one occurrence of the marker, anywhere in the string.
+            if (
+                markerIndex !== -1 &&
+                lowerText.indexOf(marker, markerIndex + 1) === -1
+            ) {
+                var wholePart = text.substring(0, markerIndex);
+                var pointsPart = text.substring(markerIndex + 1);
+
+                var whole = parseNumber(wholePart, 0);
+                var points = parseNumber(pointsPart, 0);
 
                 var sign = whole < 0 || text.charAt(0) === "-" ? -1 : 1;
                 return sign * (Math.abs(whole) + Math.abs(points) / 12);
@@ -1161,8 +1197,36 @@ Commercial licensing may be introduced for future stable releases.
     }
 
     function round(value, decimals) {
+        // Plain, standard "round to nearest, ties away from zero" -- the
+        // rule used everywhere in Emetric except the one deliberate,
+        // scoped exception in roundOffsetTiesTowardZero() below.
         var p = Math.pow(10, decimals || 3);
         return Math.round(value * p) / p;
+    }
+
+    function roundOffsetTiesTowardZero(value, decimals) {
+        // Used only for Offset (offsetGridVertical/offsetGridHorizontal
+        // in calculate()), never for round() in general. Offset is the
+        // one field where an exact halfway tie -- 0.8335, which value * p
+        // can itself manufacture out of a value that is really only
+        // minutely to one side of it -- breaks toward zero (0.833)
+        // instead of away from it, by deliberate choice. Margin, Row
+        // Margin and Row Gutter all read offsetGridVertical/Horizontal
+        // directly in the formulas below rather than the raw, unrounded
+        // alignment measure, so rounding Offset once, here, and letting
+        // every dependent field subtract or double that same rounded
+        // number keeps the whole chain -- Margin + Offset = Leading,
+        // Row Gutter = 2 x Row Margin -- consistent with itself. Every
+        // other field in Emetric still rounds with the standard rule in
+        // round() above; this exception exists in exactly one place.
+        var p = Math.pow(10, decimals || 3);
+        var scaled = value * p;
+        var sign = scaled < 0 ? -1 : 1;
+        var absScaled = Math.abs(scaled);
+        var flooredAbs = Math.floor(absScaled);
+        var fraction = absScaled - flooredAbs;
+        var roundedAbs = fraction === 0.5 ? flooredAbs : Math.round(absScaled);
+        return (sign * roundedAbs) / p;
     }
 
     function formatDecimalNumber(value, decimals) {
@@ -1345,6 +1409,26 @@ Commercial licensing may be introduced for future stable releases.
 
         try {
             oldUnit = app.scriptPreferences.measurementUnit;
+
+            // Diagnostic-only: record what this application-level
+            // preference actually was before Emetric touches it. A past,
+            // now-removed fix attempt (for the Picas "c"/"p" letter report)
+            // briefly set this preference to whatever unit Emetric's own
+            // Unit selector was on, on every recalculation. Because it is a
+            // genuine InDesign application preference -- saved to disk, and
+            // not reset by quitting/relaunching InDesign or by loading a
+            // different, unmodified copy of this script -- any install
+            // that ran that now-removed code even once may still be
+            // carrying a leftover non-Millimeters value here today. This
+            // log line makes that visible instead of invisible.
+            try {
+                writeDiagnosticInfo(
+                    "collectPageSizePresets() found app.scriptPreferences.measurementUnit=" +
+                    safeDiagnosticText(oldUnit) +
+                    " before startup (forcing Millimeters)."
+                );
+            } catch (_) {}
+
             app.scriptPreferences.measurementUnit =
                 MeasurementUnits.MILLIMETERS;
         } catch (_) {}
@@ -1373,11 +1457,19 @@ Commercial licensing may be introduced for future stable releases.
             }
         } catch (_) {}
 
-        try {
-            if (oldUnit !== null && oldUnit !== undefined) {
-                app.scriptPreferences.measurementUnit = oldUnit;
-            }
-        } catch (_) {}
+        // Deliberately NOT restoring app.scriptPreferences.measurementUnit
+        // to oldUnit here. This preference is a leftover from a past,
+        // now-removed fix attempt that could pin it away from Millimeters
+        // (see the diagnostic log above) and, being a genuine
+        // application-level preference, it does not reset itself -- an
+        // install that was ever poisoned this way stays poisoned across
+        // every later Emetric session, every InDesign restart, and every
+        // otherwise-unmodified copy of this script, until something
+        // explicitly sets it back. Leaving it at Millimeters (set just
+        // above) instead of restoring oldUnit heals that leftover state
+        // the first time this version runs, and keeps it at the one value
+        // Emetric's own internal calculations already assume throughout
+        // (everything in this file works in Millimeters internally).
 
         return list;
     }
@@ -1644,19 +1736,38 @@ Commercial licensing may be introduced for future stable releases.
         var horizontalAlignmentMeasure =
             typeSizeMeasureForAlignment(v.columnOffsetSourceIndex);
 
+        // Offset (as displayed, and as used for guide/zero-point placement
+        // below) breaks an exact halfway tie toward zero -- see
+        // roundOffsetTiesTowardZero() for why. Margin, Row Margin and Row
+        // Gutter deliberately do NOT read this rounded value -- they use
+        // the raw alignment measure directly, a few lines down. Margin's
+        // own raw value is the mirror image of Offset's around Leading/
+        // Grid Interval (verticalLine - x and x are complementary), so
+        // whenever Offset's raw value sits on an exact tie, Margin's does
+        // too -- and letting Margin round with the ordinary, un-special-
+        // cased round() (away from zero, unlike Offset's toward-zero
+        // exception) is what makes Margin + Offset land on Leading
+        // exactly: one always floors, the other always ceils, and a
+        // floor plus a ceiling of two values that sum to an exact whole
+        // is that whole, regardless of which specific numbers they are.
+        // Row Gutter is 2x Margin's raw value, computed before that
+        // rounding -- doubling moves it away from any tie, so it needs
+        // no special handling at all and would only pick up an
+        // artificial one by going through Margin's already-rounded
+        // display number instead.
         var offsetGridVertical =
-            verticalAlignmentMeasure / 2;
+            roundOffsetTiesTowardZero(verticalAlignmentMeasure / 2, 3);
         var offsetGridHorizontal =
-            horizontalAlignmentMeasure / 2;
+            roundOffsetTiesTowardZero(horizontalAlignmentMeasure / 2, 3);
 
         // GRID MARGIN
         // Horizontal values follow Horizontal Grid Interval; vertical values follow
         // Vertical Grid Interval. In normal mode these are identical. In Custom Format
         // they may diverge while the grid-step structure is preserved.
         var gridMarginHorizontal =
-            horizontalLine - offsetGridHorizontal;
+            horizontalLine - horizontalAlignmentMeasure / 2;
         var gridMarginVertical =
-            verticalLine - offsetGridVertical;
+            verticalLine - verticalAlignmentMeasure / 2;
         var gridGutterHorizontal = gridMarginHorizontal * 2;
         var gridGutterVertical = gridMarginVertical * 2;
 
@@ -1670,16 +1781,16 @@ Commercial licensing may be introduced for future stable releases.
         // MARGIN
         var marginTop =
             verticalLine * v.marginTopFactor -
-            offsetGridVertical;
+            verticalAlignmentMeasure / 2;
         var marginBottom =
             verticalLine * v.marginBottomFactor -
-            offsetGridVertical;
+            verticalAlignmentMeasure / 2;
         var marginLeft =
             horizontalLine * v.marginLeftFactor -
-            offsetGridHorizontal;
+            horizontalAlignmentMeasure / 2;
         var marginRight =
             horizontalLine * v.marginRightFactor -
-            offsetGridHorizontal;
+            horizontalAlignmentMeasure / 2;
 
         // FORMAT
         // A directly edited dimension is the format boundary itself, exactly
@@ -3601,15 +3712,24 @@ Commercial licensing may be introduced for future stable releases.
                 numericPreference >= 0 &&
                 numericPreference <= 1
             ) {
+                // app.generalPreferences.uiBrightnessPreference is a plain
+                // 0.0-1.0 float, not an evenly-spaced enum: Adobe's four
+                // presets sit at Dark = 0.0, Medium Dark = 0.50,
+                // Medium Bright/Light = 0.51, Bright/Light = 1.0. Testing
+                // against "< 0.5" excluded Medium Dark's own value of
+                // exactly 0.50, so real Medium Dark fell through to the
+                // Medium Light branch below -- the boundaries now sit at
+                // the midpoints between Adobe's real preset values instead
+                // of at reused quarter marks.
                 if (numericPreference < 0.25) {
                     return "dark";
                 }
 
-                if (numericPreference < 0.5) {
+                if (numericPreference < 0.505) {
                     return "mediumDark";
                 }
 
-                if (numericPreference < 0.75) {
+                if (numericPreference < 0.755) {
                     return "mediumLight";
                 }
 
@@ -6941,6 +7061,10 @@ Commercial licensing may be introduced for future stable releases.
             var typeSize =
                 settings.typeSize || {};
 
+            // A preset's own saved base size replaces whatever exact
+            // override was cached from the previously active preset.
+            exactMetricsMM = null;
+
             fMetrics.text =
                 String(
                     typeSize.metrics !==
@@ -8535,6 +8659,15 @@ Commercial licensing may be introduced for future stable releases.
         return data.charCodeAt(index) & 255;
     }
 
+    function binaryInt16BE(data, index) {
+        // Same bytes as binaryUInt16BE, reinterpreted as a signed 16-bit
+        // OpenType FWORD -- needed for hhea's descender (always negative)
+        // and, though both are normally positive, OS/2's sxHeight and
+        // sCapHeight are declared as signed FWORDs too.
+        var value = binaryUInt16BE(data, index);
+        return value >= 32768 ? value - 65536 : value;
+    }
+
     function binaryUInt16BE(data, index) {
         return (
             binaryByte(data, index) * 256 +
@@ -8696,6 +8829,65 @@ Commercial licensing may be introduced for future stable releases.
         }
 
         return unitsPerEm;
+    }
+
+    function readSfntOS2Metrics(file, directory) {
+        // sxHeight and sCapHeight are the font's own declared x-Height and
+        // Cap Height, in the same design units as head.unitsPerEm. They
+        // only exist from OS/2 table version 2 onward -- version 0/1
+        // fonts (and any font missing the table) have no such value, and
+        // the caller falls back to InDesign's own measurement for those.
+        if (
+            !directory ||
+            !directory.tables ||
+            !directory.tables["OS/2"]
+        ) {
+            return null;
+        }
+
+        var os2Table = directory.tables["OS/2"];
+
+        if (
+            !(os2Table.offset >= 0) ||
+            os2Table.length < 90
+        ) {
+            return null;
+        }
+
+        var versionData =
+            readBinaryRange(file, os2Table.offset, 2);
+
+        if (!versionData) {
+            return null;
+        }
+
+        var version = binaryUInt16BE(versionData, 0);
+
+        if (version < 2) {
+            return null;
+        }
+
+        var metricsData =
+            readBinaryRange(file, os2Table.offset + 86, 4);
+
+        if (!metricsData) {
+            return null;
+        }
+
+        var xHeight = binaryInt16BE(metricsData, 0);
+        var capHeight = binaryInt16BE(metricsData, 2);
+
+        if (
+            !(xHeight > 0) ||
+            !(capHeight > 0)
+        ) {
+            return null;
+        }
+
+        return {
+            xHeight: xHeight,
+            capHeight: capHeight
+        };
     }
 
     function decodeOpenTypeName(data, platformID) {
@@ -9114,6 +9306,234 @@ Commercial licensing may be introduced for future stable releases.
         return result;
     }
 
+    function readFontDesignMetrics(record) {
+        // x-Height and Cap Height read directly from the font file's own
+        // OS/2 table (sxHeight/sCapHeight), rather than from InDesign's
+        // "First Baseline Offset: X Height/Cap Height" composition
+        // measurement in readMetricsWithInDesign(). The same font's own
+        // declared metric is one fixed number no matter which InDesign
+        // version reads it; going through InDesign's own composition of
+        // that number is not -- a real, measured difference (not just
+        // floating-point noise) shows up between InDesign versions for
+        // the identical font and Metrics value. Reading the table
+        // directly is what makes the same font/settings produce the
+        // same Emetric output on any InDesign version. Ascender and
+        // Descender deliberately stay composition/outline-measured (see
+        // measureVisualAscender/measureDescender) -- those track the
+        // font's actual visible ink extent, which has no single-number
+        // table equivalent and is not what changed here.
+        var cacheKey =
+            fontRecordCacheKey(record);
+
+        if (
+            cacheKey &&
+            fontDesignMetricsCache.hasOwnProperty(
+                cacheKey
+            )
+        ) {
+            return fontDesignMetricsCache[cacheKey];
+        }
+
+        var result = null;
+        var location =
+            record && record.location
+                ? String(record.location)
+                : "";
+
+        if (!location) {
+            if (cacheKey) {
+                fontDesignMetricsCache[cacheKey] =
+                    null;
+            }
+
+            return null;
+        }
+
+        var file = new File(location);
+
+        try {
+            if (!file.exists) {
+                // Adobe documents Font.location as sometimes being the
+                // real file path followed by a slash and the PostScript
+                // name of one face, for a font file that holds more than
+                // one -- that appended name is not part of the real
+                // filesystem path, so a plain new File(location) fails to
+                // open it. Strip trailing "/segment" pieces until a real
+                // file turns up or nothing is left to strip.
+                var trimmed = location;
+                var lastSlash = trimmed.lastIndexOf("/");
+
+                while (lastSlash > 0) {
+                    trimmed = trimmed.substring(0, lastSlash);
+
+                    var candidate = new File(trimmed);
+
+                    if (candidate.exists) {
+                        file = candidate;
+                        break;
+                    }
+
+                    lastSlash = trimmed.lastIndexOf("/");
+                }
+            }
+
+            if (!file.exists) {
+                if (cacheKey) {
+                    fontDesignMetricsCache[cacheKey] =
+                        null;
+                }
+
+                return null;
+            }
+
+            if (!file.open("r")) {
+                if (cacheKey) {
+                    fontDesignMetricsCache[cacheKey] =
+                        null;
+                }
+
+                return null;
+            }
+
+            // Set after open(), because open() performs its own encoding
+            // detection and may otherwise replace the requested value.
+            file.encoding = "BINARY";
+
+            var signature =
+                readBinaryRange(file, 0, 4);
+
+            if (!signature) {
+                return null;
+            }
+
+            var directory = null;
+            var signatureTag = binaryTag(signature, 0);
+
+            if (signatureTag === "ttcf") {
+                var collectionHeader =
+                    readBinaryRange(file, 0, 12);
+
+                if (!collectionHeader) {
+                    return null;
+                }
+
+                var fontCount =
+                    binaryUInt32BE(
+                        collectionHeader,
+                        8
+                    );
+
+                if (
+                    fontCount < 1 ||
+                    fontCount > 4096
+                ) {
+                    return null;
+                }
+
+                var offsetsData =
+                    readBinaryRange(
+                        file,
+                        12,
+                        fontCount * 4
+                    );
+
+                if (!offsetsData) {
+                    return null;
+                }
+
+                var targetPostScriptName =
+                    record &&
+                    record.postScriptName
+                        ? record.postScriptName
+                        : "";
+
+                // Unlike unitsPerEm, x-Height/Cap Height genuinely differ
+                // between faces of the same collection, so this requires
+                // an exact PostScript name match rather than falling back
+                // to "the only value present" the way readFontUnitsPerEm
+                // does -- an ambiguous guess here would risk silently
+                // showing one face's metric for another.
+                if (targetPostScriptName) {
+                    for (
+                        var i = 0;
+                        i < fontCount;
+                        i++
+                    ) {
+                        var directoryOffset =
+                            binaryUInt32BE(
+                                offsetsData,
+                                i * 4
+                            );
+
+                        var candidateDirectory =
+                            readSfntDirectory(
+                                file,
+                                directoryOffset
+                            );
+
+                        if (!candidateDirectory) {
+                            continue;
+                        }
+
+                        if (
+                            directoryMatchesPostScriptName(
+                                file,
+                                candidateDirectory,
+                                targetPostScriptName
+                            )
+                        ) {
+                            directory = candidateDirectory;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                directory =
+                    readSfntDirectory(
+                        file,
+                        0
+                    );
+            }
+
+            if (directory) {
+                var unitsPerEm =
+                    readSfntUnitsPerEm(
+                        file,
+                        directory
+                    );
+
+                var os2Metrics =
+                    readSfntOS2Metrics(
+                        file,
+                        directory
+                    );
+
+                if (unitsPerEm && os2Metrics) {
+                    result = {
+                        unitsPerEm: unitsPerEm,
+                        xHeight: os2Metrics.xHeight,
+                        capHeight: os2Metrics.capHeight
+                    };
+                }
+            }
+        } catch (_) {
+            result = null;
+        } finally {
+            try {
+                if (file.opened) {
+                    file.close();
+                }
+            } catch (_) {}
+        }
+
+        if (cacheKey) {
+            fontDesignMetricsCache[cacheKey] =
+                result;
+        }
+
+        return result;
+    }
+
     function readMetricsWithInDesign(record) {
         var doc = null;
         var previousInteractionLevel = null;
@@ -9173,6 +9593,53 @@ Commercial licensing may be introduced for future stable releases.
             var descender = measureDescender(doc, record);
             var fontUnitsPerEm =
                 readFontUnitsPerEm(record);
+            var metricSource = "InDesign composition";
+
+            // x-Height and Cap Height: prefer the font's own OS/2 table
+            // value over InDesign's composition measurement above when
+            // the font file is readable. The same font's table value is
+            // one fixed number regardless of InDesign version; asking
+            // InDesign to compose "First Baseline Offset: X Height/Cap
+            // Height" and measuring the result is not -- confirmed with a
+            // real font (an exact 600/1200 x-Height design ratio
+            // measuring as exactly 2 mm at a 4 mm Metrics in one InDesign
+            // version and 1.997 mm in another). Reading the table
+            // directly is what makes the same font/settings produce the
+            // same result on any InDesign version. Ascender/Descender
+            // intentionally keep the outline-based measurement above --
+            // see measureVisualAscender/measureDescender -- since those
+            // track actual glyph ink extent, which has no single-number
+            // table equivalent.
+            var designMetrics = readFontDesignMetrics(record);
+
+            if (
+                designMetrics &&
+                designMetrics.unitsPerEm > 0
+            ) {
+                xHeight =
+                    designMetrics.xHeight /
+                    designMetrics.unitsPerEm *
+                    100;
+                capHeight =
+                    designMetrics.capHeight /
+                    designMetrics.unitsPerEm *
+                    100;
+                metricSource =
+                    "InDesign composition + OS/2 table";
+            }
+
+            // Ascender/Cap Height/x-Height/Descender still get rounded to
+            // Emetric's usual three-decimal display precision even when
+            // read from the OS/2 table above: readFontUnitsPerEm can
+            // legitimately return values that don't divide evenly into
+            // 100 (a 1000-unit-per-em font, for instance), and rounding
+            // once here, at the source, keeps that division's own tail
+            // from surviving into the ratios below and downstream mm
+            // values.
+            ascent = round(ascent, 3);
+            capHeight = round(capHeight, 3);
+            xHeight = round(xHeight, 3);
+            descender = round(descender, 3);
 
             return {
                 // InDesign's temporary metric sample is measured at 100 pt.
@@ -9186,7 +9653,7 @@ Commercial licensing may be introduced for future stable releases.
                 capHeight: capHeight,
                 xHeight: xHeight,
                 descender: descender,
-                source: "InDesign composition"
+                source: metricSource
             };
         } finally {
             try {
@@ -9900,6 +10367,13 @@ Commercial licensing may be introduced for future stable releases.
         setFontControlsEnabled(false);
         setCustomRatioControlsEnabled(false);
 
+        // Custom Metric reads Metrics and every Type Size field directly
+        // and independently (see customTypeSizeValuesFromFields()) -- it
+        // never back-solves Metrics from another field, so any exact
+        // override cached by a previous Selected Font/Emetric Decimal or
+        // Dozenal edit no longer applies here.
+        exactMetricsMM = null;
+
         try {
             setTypeRatios(customTypeRatiosFromTypeSizeFields());
             fontMetricsStatus.text =
@@ -9931,6 +10405,12 @@ Commercial licensing may be introduced for future stable releases.
         selectedFontMetrics = null;
         setCustomRatioControlsEnabled(false);
 
+        // Switching source starts from whatever Metrics currently shows;
+        // an exact override left over from a different source (e.g. a
+        // prior Custom Metric session, or a stale Selected Font edit)
+        // must not silently keep driving the calculation.
+        exactMetricsMM = null;
+
         if (sourceKey === "decimal") {
             setTypeRatios(cloneDecimalTypeRatios());
             fontMetricsStatus.text = "Using Emetric Decimal";
@@ -9948,6 +10428,13 @@ Commercial licensing may be introduced for future stable releases.
 
     function activateSelectedFontMetrics(showErrors) {
         setCustomRatioControlsEnabled(false);
+
+        // A font (re)measurement changes the ratios, not the Metrics base
+        // itself; fall back to whatever Metrics currently displays rather
+        // than keep reusing an override cached under a different font or
+        // a different Metric Source.
+        exactMetricsMM = null;
+
         var record = selectedFontRecord();
 
         if (!record) {
@@ -10411,7 +10898,10 @@ Commercial licensing may be introduced for future stable releases.
 
     function readValues() {
         return {
-            metrics: unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
+            metrics:
+                exactMetricsMM !== null && exactMetricsMM !== undefined
+                    ? exactMetricsMM
+                    : unitToMM(parseMeasureInput(fMetrics.text, currentUnitIndex, 4), currentUnitIndex),
             typeRatios: selectedTypeRatiosForCalculation(),
             manualTypeSize:
                 selectedMetricSourceKey() === "custom",
@@ -10454,6 +10944,21 @@ Commercial licensing may be introduced for future stable releases.
     var exactGridRows = null;
     var exactPageWidthMM = null;
     var exactPageHeightMM = null;
+    // Metrics (Type Size base), full precision. Editing Ascender/Cap
+    // Height/x-Height/Descender back-solves this value from the exact
+    // typed number and the active ratio; without this cache, calculate()
+    // instead had to re-parse fMetrics.text, which is rounded to three
+    // decimals for display. That extra rounding step landed differently
+    // for Selected Font (which goes through this back-solve) than for
+    // Custom Metric (whose Type Size fields feed the ratio directly,
+    // with no such intermediate round-trip), so typing the same x-Height
+    // and Leading under the two Metric Source modes could disagree in
+    // Margins/Row Margin/Row Gutter even though Offset matched. null
+    // means "derive from fMetrics.text as before" -- kept in sync
+    // wherever fMetrics.text is set from something other than this exact
+    // value, so the field and the calculation can never show two
+    // different numbers for the same idea.
+    var exactMetricsMM = null;
 
     function update() {
         try {
@@ -10466,6 +10971,11 @@ Commercial licensing may be introduced for future stable releases.
                 exactPageHeightMM !== null &&
                 exactPageHeightMM !== undefined
             ) {
+                // Custom Format solved Metrics back from the page height;
+                // keep the exact solved value for the next cycle instead of
+                // letting it fall back to re-parsing the rounded text below.
+                exactMetricsMM = currentResult.metrics;
+
                 fMetrics.text =
                     formatMeasureValue(
                         currentResult.metrics,
@@ -10550,6 +11060,7 @@ Commercial licensing may be introduced for future stable releases.
         exactGridRows = null;
         exactPageWidthMM = null;
         exactPageHeightMM = null;
+        exactMetricsMM = null;
         customRatioMetrics.text = "12";
         customRatioAscender.text = "8";
         customRatioCapHeight.text = "7";
@@ -11207,6 +11718,13 @@ Commercial licensing may be introduced for future stable releases.
             var metricsMM = metricsFromLinkedTypeSizeField(field);
 
             if (!(metricsMM > 0)) return;
+
+            // Cache the full-precision value so calculate() uses exactly
+            // what was just derived from the typed field, instead of
+            // re-parsing the display text below (rounded to three
+            // decimals) and losing precision the display rounding was
+            // never meant to affect.
+            exactMetricsMM = metricsMM;
 
             fMetrics.text =
                 formatMeasureValue(metricsMM, currentUnitIndex);
