@@ -6,6 +6,27 @@ The project uses semantic versioning with prerelease identifiers such as `alpha`
 
 ## Unreleased
 
+## 0.42.0-beta.3 — Cross-version consistency and rounding fixes
+
+This build starts over from the `0.42.0-beta.2` release exactly as published.
+A same-day series of further fix attempts from that line (a page-size-limit
+guard, a locked-field contrast fix) has been set aside rather than carried
+forward and is tracked again under Known issue below.
+
+### Fixed
+
+- The **Save Preset** and **Delete Preset** icons could become nearly invisible under the **Medium Dark** UI Brightness setting. `app.generalPreferences.uiBrightnessPreference` is a plain 0.0–1.0 float, not an enum, and Adobe's four presets are not evenly spaced quarters of that range (Dark = 0.0, Medium Dark = 0.50, Medium Bright = 0.51, Bright = 1.0). Emetric's theme detection tested `< 0.5` for Medium Dark, which excludes Medium Dark's own value of exactly 0.50, so real Medium Dark was silently misclassified as Medium Light — giving the icon the Medium Light color (a dark gray) to draw on Medium Dark's actual dark panel. The boundaries now sit at the midpoints between Adobe's real preset values instead of at reused quarter marks.
+- Selecting **Picas** as the measurement unit displayed correctly computed Pica values everywhere, but labelled them with a "c" (Cicero) instead of "p" — the number was always right, only the letter was wrong. The nested ternary in `formatInDesignCompoundUnit()` that picks between "p"/"c"/"e" was rewritten as explicit `if`/`else` statements; testing confirmed this resolves the letter specifically.
+- Typing "1" into **Metrics** while **Picas** (or Cicero/Didot Point) was active could display "4p0" instead of "1p0", with every value derived from Metrics — margins, grid, page size — reflecting the wrong number even where the Metrics field itself looked correct. `parseMeasureInput()` matched the compound-unit marker (`p`/`c`/`e`) with the same nested-ternary/`split()` pattern already fixed once for the Picas letter bug above, and could return the fallback value instead of the parsed one for plain compound input. Rewritten as explicit `if`/`else` with `indexOf`/`substring`, the same shape as that earlier fix.
+- Choosing **Custom Metric** versus **Selected Font** with the identical typed x-Height and Leading could give different Margin, Row Margin and Row Gutter values (for example 4,166 mm versus 4,167 mm) even though both showed the same Offset. `updateLinkedTypeSizeFromField()` back-solved Metrics from a typed Type Size field and wrote the rounded, three-decimal result into the Metrics display field — the only place `readValues()` had left to read Metrics back from, a second rounding step Custom Metric's own direct value never went through. A new `exactMetricsMM` cache now holds the full-precision value alongside the display text, the same pattern already used for Line Space, Page Width and Page Height, so both metric sources calculate from the same precision.
+- Offset could display a value like 0,834 mm where the project's rounding rule (round exact halfway points toward zero) called for 0,833 mm. `value * 1000` inside `round()` can itself manufacture an exact `.5` fraction out of a floating-point value that was never truly a tie — a multiplication artifact, confirmed against real values logged from InDesign. Offset now rounds through a new, narrowly-scoped `roundOffsetTiesTowardZero()`, used only for Offset's own display and guide placement; Margin, Row Margin and Row Gutter are unaffected and still round from the same raw, non-tie-broken measure they always have, so a doubled value like Row Gutter is never pulled off its own correct result by a tie-break meant for a different field.
+- The same font and Metrics value could measure a different x-Height/Cap Height on InDesign 2026 than on InDesign 2025 (for example Afacad Pro measuring 1,997 mm instead of 2,000 mm), so a grid built on one InDesign version's numbers didn't reproduce on the other. x-Height and Cap Height are now read directly from the font file's own OS/2 table (`sxHeight`/`sCapHeight`) instead of through InDesign's live composition measurement — the font's own declared number is fixed no matter which InDesign version reads it. Ascender and Descender are intentionally left as they were, measured from the font's visible outline/ink extent, which has no equivalent single-table number. Confirmed by testing on both InDesign 2025 and InDesign 2026 to now produce identical results for the same font and settings.
+
+### Known issue
+
+- Locked (calculated, read-only) numeric fields are hard to read under the **Dark** UI Brightness setting (about 1.2:1 text/background contrast versus roughly 2:1 for InDesign's own dropdowns). Not addressed in this build; see git history for a fix attempt that didn't hold up under testing (`ScriptUIGraphics.foregroundColor` is a known-broken InDesign/ScriptUI API on InDesign 19+).
+- Typing a large value into **Metrics** while a unit that is physically "large" (Picas especially) is active can throw a raw InDesign error ("Otillåtet värde", error 30481) instead of a friendly message, because the resulting page size exceeds InDesign's own 216 in (5486.4 mm) hard limit. Not addressed in this build.
+
 ## 0.42.0-beta.2 — Stability and preset fixes
 
 ### Fixed
